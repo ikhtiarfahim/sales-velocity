@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sales Velocity</title>
+<style>
+:root{--bg:#cceefa;--ink:#071b38;--muted:#617895;--line:#d9e6f0;--card:#fff;--input:#c7eafa;--nav:#eef8fc}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
+.top{border-bottom:1px solid #c8e4ef;background:rgba(255,255,255,.05)}.nav{max-width:1200px;margin:auto;height:68px;display:flex;align-items:center;gap:10px}
+.nav a{padding:10px 20px;border:1px solid #d7eaf2;border-radius:24px;color:#58728e;text-decoration:none;font-size:16px}.nav a.active{background:#071b38;color:#fff;border-color:#071b38}.updated{margin-left:auto;color:#607a95;font-size:14px}
+main{max-width:1200px;margin:32px auto 60px}.title{margin-bottom:24px}.title h1{font-size:28px;margin:0 0 2px}.title p{font-size:17px;margin:0;color:#132a47}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.card{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 1px 0 rgba(0,0,0,.01)}.metric .label{font-size:13px;letter-spacing:1.2px;color:#617995;text-transform:uppercase}.metric .value{font-size:28px;font-weight:750;margin-top:8px}.metric .sub{font-size:13px;color:#607895;margin-top:6px}
+.filters{margin-top:20px}.filters .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}.filters.two .row{grid-template-columns:1fr 1fr auto}.field label{display:block;color:#607995;font-size:14px;margin:0 0 7px}.field input,.field select{width:100%;height:50px;border:1px solid #d3e2ec;border-radius:12px;background:var(--input);padding:0 14px;font-size:16px;color:#0c2341;outline:none}.field select:disabled{color:#9aa9b8;background:#eaf6fb}.btn{height:50px;border:1px solid #d3e2ec;border-radius:12px;background:#fff;color:#607995;padding:0 20px;font-size:16px;cursor:pointer}.btn.dark{background:#071b38;color:#fff;border-color:#071b38}.notice{margin-top:20px;color:#5e7692}.table-card{margin-top:16px}.table-wrap{max-height:360px;overflow:auto}.table-wrap.tall{max-height:500px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{color:#607995;font-size:12px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0;background:#fff}td.num{text-align:right;font-variant-numeric:tabular-nums}.three-tables{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}.smalltitle{font-size:15px;font-weight:700;margin-bottom:12px}
+.home-head{margin-bottom:14px}.home-head h1{margin:0;font-size:25px}.home-meta{color:#607895;margin-top:10px}.home-meta strong{color:#071b38}
+.upload{margin-top:24px;padding:30px}.upload input[type=file]{font-size:16px}.upload .help{margin-top:18px;color:#607895;line-height:1.5}
+.status{margin-top:15px;padding:12px 14px;border-radius:10px;background:#eef8fc;color:#36536f;display:none}.status.show{display:block}.error{color:#a33;background:#fff1f1}
+.empty{padding:20px;color:#607895}.tag{display:inline-block;padding:4px 9px;border-radius:10px;background:#edf7fb;color:#57718e;font-size:12px}
+@media(max-width:900px){.nav{padding:0 14px;overflow:auto}.nav a{padding:9px 14px;white-space:nowrap}.updated{display:none}main{margin:24px 14px}.grid3,.grid2,.three-tables,.filters .row,.filters.two .row{grid-template-columns:1fr}.three-tables .card{min-width:0}.title h1{font-size:24px}}
+</style>
+</head>
+<body>
+<header class="top"><nav class="nav">
+<a href="#home" data-page="home">Home</a><a href="#primary" data-page="primary">Primary</a><a href="#secondary" data-page="secondary">Secondary</a><a href="#order" data-page="order">Order</a><a href="#asm" data-page="asm">ASM</a><a href="#update" data-page="update">Update Data</a>
+<span class="updated" id="updatedText">Updated: —</span>
+</nav></header>
+<main id="app"></main>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+let DATA = window.__EMBEDDED_DATA__ || null;
+let UPDATED = window.__EMBEDDED_UPDATED__ || null;
+const REQUIRED = ["Primary","Delivery","Order"];
+const DEFAULT_EXCEL = "Data.xlsx";
+
+async function loadOnlineExcel(){
+  if(DATA) return true;
+  try{
+    const response = await fetch(DEFAULT_EXCEL + "?v=" + Date.now(), {cache:"no-store"});
+    if(!response.ok) throw new Error("Data.xlsx not found");
+    const buffer = await response.arrayBuffer();
+    const wb = XLSX.read(buffer,{type:"array",cellDates:true});
+    const missing=REQUIRED.filter(s=>!wb.SheetNames.includes(s));
+    if(missing.length) throw new Error("Missing required sheet(s): "+missing.join(", "));
+    const out={};
+    REQUIRED.forEach(s=>out[s]=XLSX.utils.sheet_to_json(wb.Sheets[s],{defval:null,raw:true}));
+    out.Primary.forEach(r=>{ r.__PRIMARY_SALES_AO = r[Object.keys(r)[40]] ?? r["DB Value"] ?? r["DP Value"] ?? 0; });
+    DATA=out;
+    UPDATED="Online Excel: Data.xlsx";
+    return true;
+  }catch(err){
+    console.warn("Automatic Excel load failed:",err.message);
+    return false;
+  }
+}
+const money = n => Number(n||0).toLocaleString("en-US",{maximumFractionDigits:0});
+const num = n => Number(n||0).toLocaleString("en-US",{maximumFractionDigits:0});
+const dateOnly = v => { const d=new Date(v); return isNaN(d)?null:new Date(d.getFullYear(),d.getMonth(),d.getDate()); };
+const iso = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` : "";
+const fmtDate = d => d ? d.toLocaleDateString("en-US",{month:"2-digit",day:"2-digit",year:"numeric"}) : "";
+const esc = s => String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const val = (r,k) => r[k] ?? "";
+function rows(sheet){return DATA?.[sheet] || []}
+function sum(rows,key){return rows.reduce((a,r)=>a+(Number(r[key])||0),0)}
+function uniq(arr){return [...new Set(arr.filter(x=>x!==null&&x!==undefined&&String(x).trim()!=="").map(String))].sort((a,b)=>a.localeCompare(b))}
+function rangeDates(rows,key){let ds=rows.map(r=>dateOnly(r[key])).filter(Boolean);return {min:ds.length?new Date(Math.min(...ds)):null,max:ds.length?new Date(Math.max(...ds)):null}}
+function filterRows(sheet,key,from,to,zone,area){
+  return rows(sheet).filter(r=>{
+    let d=dateOnly(r[key]); if(from&&(!d||d<from)) return false; if(to&&(!d||d>to)) return false;
+    if(zone && String(r.Zone||r["Zone.1"]||"")!==String(zone)) return false;
+    if(area && String(r.Area||"")!==String(area)) return false;
+    return true;
+  });
+}
+function dateInput(value){return `<input type="date" value="${esc(value)}">`}
+function options(list,selected=""){return `<option value="">Select ${selected==="__none__"?"":""}</option>`+list.map(x=>`<option ${String(x)===String(selected)?"selected":""} value="${esc(x)}">${esc(x)}</option>`).join("")}
+function metric(label,value,sub=""){return `<div class="card metric"><div class="label">${label}</div><div class="value">${money(value)}</div>${sub?`<div class="sub">${esc(sub)}</div>`:""}</div>`}
+function table(title, data, nameKey, valueKey, limit=50){
+  let sorted=[...data].sort((a,b)=>(Number(b[valueKey])||0)-(Number(a[valueKey])||0)).slice(0,limit);
+  return `<div class="card"><div class="smalltitle">${esc(title)}</div><div class="table-wrap"><table><thead><tr><th>${esc(nameKey)}</th><th style="text-align:right">Value</th></tr></thead><tbody>${sorted.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${money(r.value)}</td></tr>`).join("")}</tbody></table></div></div>`;
+}
+function grouped(rows,key,valueKey){
+  const m=new Map(); rows.forEach(r=>{let k=String(r[key]??"").trim();if(!k)return;m.set(k,(m.get(k)||0)+(Number(r[valueKey])||0))});
+  return [...m].map(([name,value])=>({name,value}));
+}
+
+function ensureDerivedFields(){
+ if(!DATA) return;
+ if(DATA.Primary){ DATA.Primary.forEach(r=>{ if(r.__PRIMARY_SALES_AO===undefined||r.__PRIMARY_SALES_AO===null||r.__PRIMARY_SALES_AO===""){ const keys=Object.keys(r); r.__PRIMARY_SALES_AO=r[keys[40]]??0; } }); }
+ const map=new Map();
+ (DATA.Delivery||[]).forEach(r=>{ const area=String(r.Area??"").trim(); const zsm=String(r.level2name??"").trim(); if(area&&zsm&&!map.has(area)) map.set(area,zsm); });
+ const apply=(sheet)=>{ (DATA[sheet]||[]).forEach(r=>{ const area=String(r.Area??"").trim(); if(!r.__ZSM) r.__ZSM=map.get(area)||"Unknown"; }); };
+ apply("Primary"); apply("Delivery"); apply("Order");
+}
+
+function render(){
+ ensureDerivedFields();
+  const page=(location.hash||"#home").slice(1);
+  document.querySelectorAll(".nav a").forEach(a=>a.classList.toggle("active",a.dataset.page===page));
+  document.getElementById("updatedText").textContent="Updated: "+(UPDATED||"—");
+  if(!DATA && page!=="update"){ renderNoData(); return; }
+  ({home:renderHome,primary:renderPrimary,secondary:renderSecondary,order:renderOrder,asm:renderASM,update:renderUpdate}[page]||renderHome)();
+}
+function shell(title,sub,body){document.getElementById("app").innerHTML=`<div class="title"><h1>${title}</h1><p>${sub}</p></div>${body}`}
+function renderNoData(){shell("Sales Velocity","Upload today's Excel file to start.",`<div class="card empty">No data loaded. Open <b>Update Data</b> and choose the Excel file. Only <b>Primary</b>, <b>Delivery</b> and <b>Order</b> sheets will be read; <b>XYZ</b> is ignored.</div>`)}
+function currentMonthStats(sheet,dateKey,valueKey){
+  const all=rows(sheet); const rd=rangeDates(all,dateKey); const max=rd.max;
+  const month=max?max.getMonth():new Date().getMonth(), year=max?max.getFullYear():new Date().getFullYear();
+  const todayRows=all.filter(r=>{let d=dateOnly(r[dateKey]);return d&&d.getTime()===max?.getTime()});
+  const first=new Date(year,month,1), end=max||new Date();
+  const working=[...Array(Math.floor((end-first)/86400000)+1)].map((_,i)=>new Date(year,month,1+i)).filter(d=>d<=end&&d.getDay()!==5&&d.getTime()!==end.getTime());
+  const monthRows=all.filter(r=>{let d=dateOnly(r[dateKey]);return d&&d>=first&&d<=end&&d.getDay()!==5&&d.getTime()!==end.getTime()});
+  return {total:sum(all,valueKey),today:sum(todayRows,valueKey),avg:working.length?sum(monthRows,valueKey)/working.length:0,days:working.length,date:max};
+}
+function renderHome(){
+ const d=currentMonthStats("Delivery","orderdate","IMS TK"),o=currentMonthStats("Order","Order Date","Order TK"),p=currentMonthStats("Primary","Order Date","__PRIMARY_SALES_AO");
+ const zs=uniq([...rows("Primary"),...rows("Delivery"),...rows("Order")].map(r=>r.__ZSM));
+ const topZSM=zs.map(z=>({z,primary:grouped(rows("Primary"),"__ZSM","__PRIMARY_SALES_AO").find(x=>x.name===z)?.value||0,delivery:grouped(rows("Delivery"),"__ZSM","IMS TK").find(x=>x.name===z)?.value||0,order:grouped(rows("Order"),"__ZSM","Order TK").find(x=>x.name===z)?.value||0})).filter(x=>x.z!=="Unknown").sort((a,b)=>b.primary-a.primary).slice(0,5);
+ shell("Sales Velocity",`Last 24 Hours Visitor Qty: — &nbsp;&nbsp; Total Visitor Qty: —`,`
+ <div class="grid3">
+ ${metric("Total Delivery Value",d.total)}${metric("Total Order Value",o.total)}${metric("Total Primary Value",p.total)}
+ ${metric("Day-wise Avg Delivery",d.avg,`${d.days} days this month (Fridays & today excluded)`)}
+ ${metric("Day-wise Avg Order",o.avg,`${o.days} days this month (Fridays & today excluded)`)}
+ ${metric("Day-wise Avg Primary",p.avg,`${p.days} days this month (Fridays & today excluded)`)}
+ </div>
+ <div class="three-tables">
+ ${table("SKU-wise total Delivery Value",grouped(rows("Delivery"),"SKU","IMS TK"),"SKU","value")}
+ ${table("SKU-wise total Order Value",grouped(rows("Order"),"SKU","Order TK"),"SKU","value")}
+ ${table("SKU-wise total Primary Value",grouped(rows("Primary"),"SKU","__PRIMARY_SALES_AO"),"SKU","value")}
+ </div>
+ <div class="card table-card"><div class="smalltitle">Top 5 ZSMs — Primary, Delivery & Order Value</div><div class="table-wrap"><table><thead><tr><th>ZSM</th><th>Primary</th><th>Delivery</th><th>Order</th><th>Delivery − Order</th></tr></thead><tbody>
+ ${topZSM.map(x=>`<tr><td>${esc(x.z)}</td><td class="num">${money(x.primary)}</td><td class="num">${money(x.delivery)}</td><td class="num">${money(x.order)}</td><td class="num">${money(x.delivery-x.order)}</td></tr>`).join("")}</tbody></table></div></div>`);
+}
+function filterPanel(type){
+ const config={primary:{sheet:"Primary",date:"Order Date",value:"__PRIMARY_SALES_AO",view:false},secondary:{sheet:"Delivery",date:"orderdate",value:"IMS TK",view:true},order:{sheet:"Order",date:"Order Date",value:"Order TK",view:true}}[type];
+ const rd=rangeDates(rows(config.sheet),config.date); const max=rd.max||new Date(), min=rd.min||new Date(new Date().getFullYear(),new Date().getMonth(),1);
+ const zones=uniq(rows(config.sheet).map(r=>r.Zone||r["Zone.1"]));
+ const id=`${type}-`;
+ return `<div class="card filters ${config.view?"":"two"}" id="${id}filters">
+ <div class="row">
+ <div class="field"><label>From date</label>${dateInput(iso(min))}</div><div class="field"><label>To date</label>${dateInput(iso(max))}</div>${config.view?`<button class="btn" id="${id}all">All dates</button>`:`<button class="btn" id="${id}all">All dates</button>`}
+ </div>
+ <div class="row" style="margin-top:14px">
+ ${config.view?`<div class="field"><label>View by</label><select id="${id}view"><option>DB</option><option>SO</option><option>SKU</option></select></div>`:""}
+ <div class="field"><label>Zone</label><select id="${id}zone"><option value="">Select zone</option>${zones.map(z=>`<option value="${esc(z)}">${esc(z)}</option>`).join("")}</select></div>
+ <div class="field"><label>Area</label><select id="${id}area" disabled><option value="">Select area</option></select></div>
+ </div></div><div id="${id}result" class="card notice">Select a zone and an area to see sales.</div>`;
+}
+function setupFilters(type){
+ const config={primary:{sheet:"Primary",date:"Order Date",value:"__PRIMARY_SALES_AO",view:false},secondary:{sheet:"Delivery",date:"orderdate",value:"IMS TK",view:true},order:{sheet:"Order",date:"Order Date",value:"Order TK",view:true}}[type];
+ const pre=document.getElementById(type+"-filters"), inputs=pre.querySelectorAll("input"); const from=inputs[0],to=inputs[1], zone=document.getElementById(type+"-zone"),area=document.getElementById(type+"-area"),result=document.getElementById(type+"-result"),view=document.getElementById(type+"-view");
+ const updateAreas=()=>{const areas=uniq(rows(config.sheet).filter(r=>String(r.Zone||r["Zone.1"]||"")===zone.value).map(r=>r.Area));area.disabled=!zone.value;area.innerHTML=`<option value="">Select area</option>`+areas.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join("")};
+ const update=()=>{ if(!zone.value||!area.value){result.innerHTML="Select a zone and an area to see sales.";return}
+  let rs=filterRows(config.sheet,config.date,from.value?new Date(from.value+"T00:00:00"):null,to.value?new Date(to.value+"T23:59:59"):null,zone.value,area.value);
+  const groupKey=type==="primary"?"Depotname":(view?.value==="SO"?"SO Name":view?.value==="SKU"?"SKU":"DB Name");
+  const g=grouped(rs,groupKey,config.value).sort((a,b)=>b.value-a.value);
+  result.innerHTML=`<div class="smalltitle">${esc(area.value)} — ${esc(zone.value)} <span class="tag">${money(sum(rs,config.value))}</span></div><div class="table-wrap tall"><table><thead><tr><th>${esc(groupKey)}</th><th style="text-align:right">${type==="primary"?"DB Value":type==="secondary"?"IMS TK":"Order TK"}</th></tr></thead><tbody>${g.map(x=>`<tr><td>${esc(x.name)}</td><td class="num">${money(x.value)}</td></tr>`).join("")}</tbody></table></div>`;
+ };
+ zone.addEventListener("change",()=>{updateAreas();update()});area.addEventListener("change",update);from.addEventListener("change",update);to.addEventListener("change",update);view?.addEventListener("change",update);
+ document.getElementById(type+"-all").onclick=()=>{const rd=rangeDates(rows(config.sheet),config.date);from.value=iso(rd.min);to.value=iso(rd.max);update()};
+}
+function renderPrimary(){let s=currentMonthStats("Primary","Order Date","__PRIMARY_SALES_AO");shell("Primary","DP Value — zone, area, DB and SKU wise",`<div class="grid2">${metric("Total DB Value (Whole File)",s.total)}${metric(`Today's DB Value — ${iso(s.date)}`,s.today)}</div>${filterPanel("primary")}`);setupFilters("primary")}
+function renderSecondary(){let s=currentMonthStats("Delivery","orderdate","IMS TK");shell("Delivery","IMS TK — zone, area, DB / SO and SKU wise",`<div class="grid2">${metric("Total IMS TK (Whole File)",s.total)}${metric(`Today's IMS TK — ${iso(s.date)}`,s.today)}</div>${filterPanel("secondary")}`);setupFilters("secondary")}
+function renderOrder(){let s=currentMonthStats("Order","Order Date","Order TK");shell("Order","Order TK — zone, area, DB / SO and SKU wise",`<div class="grid2">${metric("Total Order TK (Whole File)",s.total)}${metric(`Today's Order TK — ${iso(s.date)}`,s.today)}</div>${filterPanel("order")}`);setupFilters("order")}
+function renderASM(){
+ const z=uniq(rows("Delivery").map(r=>r.Zone)), by=grouped(rows("Delivery"),"level1name","IMS TK").sort((a,b)=>b.value-a.value);
+ shell("ASM","Delivery performance — ASM wise",`<div class="card table-card"><div class="smalltitle">ASM-wise Delivery Value</div><div class="table-wrap tall"><table><thead><tr><th>ASM</th><th style="text-align:right">Delivery Value</th></tr></thead><tbody>${by.map(x=>`<tr><td>${esc(x.name)}</td><td class="num">${money(x.value)}</td></tr>`).join("")}</tbody></table></div></div>`);
+}
+function renderUpdate(){
+ shell("Update data","Pick today's Excel file — publish it online, or download a ready index.html.",`
+ <div class="card upload"><input id="file" type="file" accept=".xlsx,.xls"><div class="help">The file must contain the sheets <b>Primary</b>, <b>Delivery</b> and <b>Order</b>. The <b>XYZ</b> sheet is ignored because it is only a calculation/reference file.</div><div id="status" class="status"></div><div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap"><button id="download" class="btn dark" disabled>Download ready index.html</button><button id="clear" class="btn">Clear data</button></div></div>`);
+ document.getElementById("file").onchange=handleFile;
+ document.getElementById("download").onclick=downloadReady;
+ document.getElementById("clear").onclick=()=>{DATA=null;UPDATED=null;render()};
+}
+function handleFile(e){
+ const file=e.target.files[0];if(!file)return; const status=document.getElementById("status");status.className="status show";status.textContent="Reading Primary, Delivery and Order sheets…";
+ const reader=new FileReader();reader.onload=ev=>{
+  try{
+   const wb=XLSX.read(ev.target.result,{type:"array",cellDates:true});
+   const missing=REQUIRED.filter(s=>!wb.SheetNames.includes(s));if(missing.length)throw new Error("Missing required sheet(s): "+missing.join(", "));
+   const out={}; REQUIRED.forEach(s=>out[s]=XLSX.utils.sheet_to_json(wb.Sheets[s],{defval:null,raw:true}));
+   out.Primary.forEach(r=>{ r.__PRIMARY_SALES_AO = r[Object.keys(r)[40]] ?? r["DB Value"] ?? r["DP Value"] ?? 0; });
+   DATA=out;UPDATED=new Date().toLocaleString("en-US",{weekday:"long",day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"});
+   status.textContent=`Loaded successfully. ${out.Primary.length.toLocaleString()} Primary rows, ${out.Delivery.length.toLocaleString()} Delivery rows, ${out.Order.length.toLocaleString()} Order rows. XYZ was ignored.`;
+   document.getElementById("download").disabled=false;
+   render();
+  }catch(err){status.className="status show error";status.textContent=err.message}
+ };reader.readAsArrayBuffer(file);
+}
+function downloadReady(){
+ if(!DATA)return;
+ const html=document.documentElement.outerHTML;
+ const injection=`<script>window.__EMBEDDED_DATA__=${JSON.stringify(DATA).replace(/<\//g,"<\\\\/")};window.__EMBEDDED_UPDATED__=${JSON.stringify(UPDATED)};<\/script>`;
+ const ready=html.replace("</body>",injection+"</body>");
+ const blob=new Blob(["<!doctype html>\n"+ready],{type:"text/html;charset=utf-8"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="index.html";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+window.addEventListener("hashchange",render);
+
+(async()=>{
+  if(!DATA){
+    await loadOnlineExcel();
+  }
+  render();
+})();
+</script>
+</body>
+</html>
