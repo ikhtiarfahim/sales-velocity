@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sales Velocity</title>
+<style>
+:root{--bg:#cceefa;--ink:#071b38;--muted:#617895;--line:#d9e6f0;--card:#fff;--input:#c7eafa;--nav:#eef8fc}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
+.app-locked{display:none!important}.login-overlay{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#cceefa,#eef9fd);display:flex;align-items:center;justify-content:center;padding:20px}.login-card{width:min(420px,100%);background:#fff;border-radius:20px;padding:32px;box-shadow:0 20px 60px rgba(7,27,56,.18)}.login-logo{display:block;width:150px;max-width:55%;height:auto;margin:0 auto 22px}.login-card h1{margin:0 0 7px;font-size:27px;text-align:center}.login-card>p{margin:0 0 24px;color:#607895;text-align:center}.login-card .field{margin-top:14px}.login-card .btn{width:100%;margin-top:20px}.login-error{display:none;margin-top:14px;padding:11px 13px;border-radius:10px;background:#fff1f1;color:#a33}.login-error.show{display:block}
+.top{border-bottom:1px solid #c8e4ef;background:rgba(255,255,255,.05)}.nav{max-width:1200px;margin:auto;height:68px;display:flex;align-items:center;gap:10px}
+.nav a{padding:10px 20px;border:1px solid #d7eaf2;border-radius:24px;color:#58728e;text-decoration:none;font-size:16px}.nav a.active{background:#071b38;color:#fff;border-color:#071b38}.updated{margin-left:auto;color:#607a95;font-size:14px}
+main{max-width:1200px;margin:32px auto 60px}.title{margin-bottom:24px}.title h1{font-size:28px;margin:0 0 2px}.title p{font-size:17px;margin:0;color:#132a47}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.grid2{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.card{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 1px 0 rgba(0,0,0,.01)}.metric .label{font-size:13px;letter-spacing:1.2px;color:#617995;text-transform:uppercase}.metric .value{font-size:28px;font-weight:750;margin-top:8px}.metric .sub{font-size:13px;color:#607895;margin-top:6px}
+.filters{margin-top:20px}.filters .row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.filters .row.two-cols{grid-template-columns:repeat(2,minmax(0,1fr))}.field label{display:block;color:#607995;font-size:14px;margin:0 0 7px}.field input,.field select{width:100%;height:50px;border:1px solid #d3e2ec;border-radius:12px;background:var(--input);padding:0 14px;font-size:16px;color:#0c2341;outline:none}.field select:disabled{color:#9aa9b8;background:#eaf6fb}.field.action .btn{width:100%}.btn{height:50px;border:1px solid #d3e2ec;border-radius:12px;background:#fff;color:#607995;padding:0 20px;font-size:16px;cursor:pointer}.btn.dark{background:#071b38;color:#fff;border-color:#071b38}.notice{margin-top:20px;color:#5e7692}.table-card{margin-top:16px}.table-wrap{max-height:360px;overflow:auto}.table-wrap.tall{max-height:500px}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{color:#607995;font-size:12px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0;background:#fff}td.num{text-align:right;font-variant-numeric:tabular-nums}.three-tables{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}.smalltitle{font-size:15px;font-weight:700;margin-bottom:12px}
+.home-head{margin-bottom:14px}.home-head h1{margin:0;font-size:25px}.home-meta{color:#607895;margin-top:10px}.home-meta strong{color:#071b38}
+.upload{margin-top:24px;padding:30px}.upload input[type=file]{font-size:16px}.upload .help{margin-top:18px;color:#607895;line-height:1.5}
+.status{margin-top:15px;padding:12px 14px;border-radius:10px;background:#eef8fc;color:#36536f;display:none}.status.show{display:block}.error{color:#a33;background:#fff1f1}
+.publish-box{margin-top:22px;padding-top:22px;border-top:1px solid var(--line)}.publish-box h3{margin:0 0 6px}.publish-box p{margin:0 0 16px;color:#607895;line-height:1.5}.publish-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.publish-grid .wide{grid-column:1/-1}.publish-grid label{display:block;color:#607995;font-size:13px;margin:0 0 6px}.publish-grid input{width:100%;height:46px;border:1px solid #d3e2ec;border-radius:10px;background:var(--input);padding:0 12px;font-size:15px;color:#0c2341}.publish-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.security{font-size:13px!important;margin-top:12px!important}
+.empty{padding:20px;color:#607895}.tag{display:inline-block;padding:4px 9px;border-radius:10px;background:#edf7fb;color:#57718e;font-size:12px}
+.drill-link{border:0;background:none;color:#0759a6;font:inherit;font-weight:650;padding:0;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px}.drill-panel{margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+@media(max-width:900px){.nav{padding:0 14px;overflow:auto}.nav a{padding:9px 14px;white-space:nowrap}.updated{display:none}main{margin:24px 14px}.grid3,.grid2,.three-tables,.filters .row,.filters .row.two-cols,.publish-grid{grid-template-columns:1fr}.publish-grid .wide{grid-column:auto}.three-tables .card{min-width:0}.title h1{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="login-overlay" id="loginOverlay" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+ <form class="login-card" id="loginForm"><img class="login-logo" src="deli-seeklogo.png" alt="Deli logo"><h1 id="loginTitle">Sales Velocity</h1><p>Log in to open the dashboard.</p>
+ <div class="field"><label for="loginUsername">Username</label><input id="loginUsername" type="text" autocomplete="username" required autofocus></div>
+ <div class="field"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="current-password" required></div>
+ <div class="login-error" id="loginError">Incorrect username or password.</div><button class="btn dark" type="submit">Log In</button></form>
+</div>
+<header class="top app-locked" id="siteHeader"><nav class="nav">
+<a href="#home" data-page="home">Home</a><a href="#primary" data-page="primary">Primary</a><a href="#secondary" data-page="secondary">Secondary</a><a href="#order" data-page="order">Order</a><a href="#stock" data-page="stock">Stock</a><a href="#asm" data-page="asm">ASM</a><a href="#zsm" data-page="zsm">ZSM</a><a href="#sku" data-page="sku">SKU</a><a href="#update" data-page="update">Update Data</a>
+<span class="updated" id="updatedText">Updated: —</span>
+</nav></header>
+<main id="app" class="app-locked"></main>
+
+<script>
+let DATA = window.__EMBEDDED_DATA__ || null;
+let UPDATED = window.__EMBEDDED_UPDATED__ || null;
+let PENDING_EXCEL = null;
+const REQUIRED = ["Primary","Delivery","Order","Stock"];
+const DEFAULT_JSON = "Data.json";
+const DEFAULT_EXCEL = "Data.xlsx";
+let XLSX_LOADER = null;
+function loadSheetJS(){
+  if(window.XLSX) return Promise.resolve();
+  if(XLSX_LOADER) return XLSX_LOADER;
+  XLSX_LOADER=new Promise((resolve,reject)=>{const s=document.createElement("script");s.src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";s.onload=resolve;s.onerror=()=>reject(new Error("Excel reader could not load"));document.head.appendChild(s)});
+  return XLSX_LOADER;
+}
+async function loadOnlineData(){
+  if(DATA) return true;
+  try{
+    const response=await fetch(DEFAULT_JSON,{cache:"no-cache"});
+    if(!response.ok) throw new Error("Data.json not found");
+    const payload=await response.json(); DATA=decodeWire(payload); UPDATED=payload.updated||"Online data: Data.json"; return true;
+  }catch(jsonErr){console.warn("Optimized data load failed; trying Excel:",jsonErr.message)}
+  try{
+    await loadSheetJS();
+    const response = await fetch(DEFAULT_EXCEL, {cache:"no-cache"});
+    if(!response.ok) throw new Error("Data.xlsx not found");
+    const buffer = await response.arrayBuffer();
+    const wb = XLSX.read(buffer,{type:"array",cellDates:true});
+    const missing=REQUIRED.filter(s=>!wb.SheetNames.includes(s));
+    if(missing.length) throw new Error("Missing required sheet(s): "+missing.join(", "));
+    const out={};
+    REQUIRED.forEach(s=>out[s]=XLSX.utils.sheet_to_json(wb.Sheets[s],{defval:null,raw:true}));
+    DATA=compactData(out);
+    UPDATED="Online Excel: Data.xlsx";
+    return true;
+  }catch(err){
+    console.warn("Automatic Excel load failed:",err.message);
+    return false;
+  }
+}
+const money = n => Number(n||0).toLocaleString("en-US",{maximumFractionDigits:0});
+const num = n => Number(n||0).toLocaleString("en-US",{maximumFractionDigits:0});
+const dateOnly = v => {
+  if(v===null||v===undefined||v==="") return null;
+  if(v instanceof Date && !isNaN(v)) return new Date(v.getFullYear(),v.getMonth(),v.getDate());
+  if(typeof v==="number"){
+    if(v<20000||v>80000) return null;
+    const d=new Date(Date.UTC(1899,11,30)+Math.floor(v)*86400000);return new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate());
+  }
+  const d=new Date(v); return isNaN(d)?null:new Date(d.getFullYear(),d.getMonth(),d.getDate());
+};
+const iso = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}` : "";
+const fmtDate = d => d ? d.toLocaleDateString("en-US",{month:"2-digit",day:"2-digit",year:"numeric"}) : "";
+const esc = s => String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+const val = (r,k) => r[k] ?? "";
+function rows(sheet){return DATA?.[sheet] || []}
+function zoneOf(r){const keys=Object.keys(r).filter(k=>/^Zone(?:_\d+)?$/.test(k)).reverse();for(const k of keys){const v=String(r[k]??"").trim();if(v)return v}return ""}
+function columnValue(r,names){for(const name of names){if(Object.prototype.hasOwnProperty.call(r,name))return Number(r[name])||0;const key=Object.keys(r).find(k=>k.trim().toLowerCase()===name.toLowerCase());if(key)return Number(r[key])||0}return 0}
+function columnText(r,names){for(const name of names){if(Object.prototype.hasOwnProperty.call(r,name)&&r[name]!==null&&r[name]!==undefined&&String(r[name]).trim()!=="")return String(r[name]).trim();const key=Object.keys(r).find(k=>k.trim().toLowerCase()===name.toLowerCase()&&r[k]!==null&&r[k]!==undefined&&String(r[k]).trim()!=="");if(key)return String(r[key]).trim()}return ""}
+function compactData(source){
+ const pick=(r,keys)=>{const out={};keys.forEach(k=>{const v=r[k];if(v!==undefined&&v!==null&&v!=="")out[k]=v});out.Zone=zoneOf(r);return out};
+ return {
+  Primary:(source.Primary||[]).map(r=>{const x=pick(r,["Order Date","SKU","Area","SKU Code","SKU Name"]);x["DP Value"]=columnValue(r,["DP Value"]);x["DB ID"]=columnText(r,["DB ID"]);x["DB Name"]=columnText(r,["DB Name"]);return x}),
+  Delivery:(source.Delivery||[]).map(r=>{const x=pick(r,["orderdate","SKU","Area","SKU Code","SKU Name"]);x["IMS Value"]=columnValue(r,["IMS Value","IMS TK"]);x["DB ID"]=columnText(r,["DB ID","distributorcode"]);x["DB Name"]=columnText(r,["DB Name"]);x["SO ID"]=columnText(r,["SO ID","srcode"]);x["SO Name"]=columnText(r,["SO Name"]);return x}),
+  Order:(source.Order||[]).map(r=>{const x=pick(r,["Order Date","SKU","Area","SKU Code","SKU Name"]);x["Order TK"]=columnValue(r,["Order TK"]);x["DB ID"]=columnText(r,["DB ID","Distributor Code"]);x["DB Name"]=columnText(r,["DB Name"]);x["SO ID"]=columnText(r,["SO ID","SR Code"]);x["SO Name"]=columnText(r,["SO Name"]);return x}),
+  Stock:(source.Stock||[]).map(r=>({"Total Value in DP":columnValue(r,["Total Value in DP"]),"Total Value in TP":columnValue(r,["Total Value in TP"]),"PCS per Carton":columnValue(r,["PCS per Carton"]),"SKU Code":columnText(r,["SKU Code"]),"SKU Name":columnText(r,["SKU Name"]),SKU:columnText(r,["SKU"])}))
+ };
+}
+function encodeWire(source){const d=compactData(source),pack=(r,dateKey,valueKey)=>[r[dateKey]??"",r[valueKey]||0,r.SKU??"",r.Area??"",r.Zone??"",r["DB ID"]??"",r["DB Name"]??"",r["SO ID"]??"",r["SO Name"]??"",r["SKU Code"]??"",r["SKU Name"]??""];return {v:5,p:d.Primary.map(r=>pack(r,"Order Date","DP Value")),d:d.Delivery.map(r=>pack(r,"orderdate","IMS Value")),o:d.Order.map(r=>pack(r,"Order Date","Order TK")),s:d.Stock.map(r=>[r["Total Value in DP"]||0,r["Total Value in TP"]||0,r["PCS per Carton"]||0,r["SKU Code"]||"",r["SKU Name"]||"",r.SKU||""])} }
+function decodeWire(payload){if(!payload||!payload.v)return compactData(payload?.data||payload||{});if(payload.v===1)return compactData({Primary:(payload.p||[]).map(r=>({"Order Date":r[0],"DP Value":r[1],SKU:r[2],Area:r[3],Zone:r[4],"DB Name":r[5],"SO Name":r[6]})),Delivery:(payload.d||[]).map(r=>({orderdate:r[0],"IMS Value":r[1],SKU:r[2],Area:r[3],Zone:r[4],"DB Name":r[5],"SO Name":r[6]})),Order:(payload.o||[]).map(r=>({"Order Date":r[0],"Order TK":r[1],SKU:r[2],Area:r[3],Zone:r[4],"DB Name":r[5],"SO Name":r[6]}))});const unpack=(r,dateKey,valueKey)=>({[dateKey]:r[0],[valueKey]:r[1],SKU:r[2],Area:r[3],Zone:r[4],"DB ID":r[5],"DB Name":r[6],"SO ID":r[7],"SO Name":r[8],"SKU Code":r[9]??"","SKU Name":r[10]??""});return {Primary:(payload.p||[]).map(r=>unpack(r,"Order Date","DP Value")),Delivery:(payload.d||[]).map(r=>unpack(r,"orderdate","IMS Value")),Order:(payload.o||[]).map(r=>unpack(r,"Order Date","Order TK")),Stock:(payload.s||[]).map(r=>({"Total Value in DP":r[0]||0,"Total Value in TP":r[1]||0,"PCS per Carton":r[2]||0,"SKU Code":r[3]||"","SKU Name":r[4]||"",SKU:r[5]||""}))}}
+function sum(rows,key){return rows.reduce((a,r)=>a+(Number(r[key])||0),0)}
+function uniq(arr){return [...new Set(arr.filter(x=>x!==null&&x!==undefined&&String(x).trim()!=="").map(String))].sort((a,b)=>a.localeCompare(b))}
+function rangeDates(rows,key){let ds=rows.map(r=>dateOnly(r[key])).filter(Boolean);return {min:ds.length?new Date(Math.min(...ds)):null,max:ds.length?new Date(Math.max(...ds)):null}}
+function filterRows(sheet,key,from,to,zone,area){
+  return rows(sheet).filter(r=>{
+    let d=dateOnly(r[key]); if(from&&(!d||d<from)) return false; if(to&&(!d||d>to)) return false;
+    if(zone && zoneOf(r)!==String(zone)) return false;
+    if(area && String(r.Area||"")!==String(area)) return false;
+    return true;
+  });
+}
+function dateInput(value){return `<input type="date" value="${esc(value)}">`}
+function options(list,selected=""){return `<option value="">Select ${selected==="__none__"?"":""}</option>`+list.map(x=>`<option ${String(x)===String(selected)?"selected":""} value="${esc(x)}">${esc(x)}</option>`).join("")}
+function metric(label,value,sub=""){return `<div class="card metric"><div class="label">${label}</div><div class="value">${money(value)}</div>${sub?`<div class="sub">${esc(sub)}</div>`:""}</div>`}
+function table(title, data, nameKey, valueKey, limit=50){
+  let sorted=[...data].sort((a,b)=>(Number(b[valueKey])||0)-(Number(a[valueKey])||0)).slice(0,limit);
+  return `<div class="card"><div class="smalltitle">${esc(title)}</div><div class="table-wrap"><table><thead><tr><th>${esc(nameKey)}</th><th style="text-align:right">Value</th></tr></thead><tbody>${sorted.map(r=>`<tr><td>${esc(r.name)}</td><td class="num">${money(r.value)}</td></tr>`).join("")}</tbody></table></div></div>`;
+}
+function grouped(rows,key,valueKey){
+  const m=new Map(); rows.forEach(r=>{let k=String(r[key]??"").trim();if(!k)return;m.set(k,(m.get(k)||0)+(Number(r[valueKey])||0))});
+  return [...m].map(([name,value])=>({name,value}));
+}
+function entityGroups(sourceRows,entity,valueKey){
+ const m=new Map();sourceRows.forEach(r=>{const id=columnText(r,[entity+" ID"]),name=columnText(r,[entity+" Name"]);if(!id&&!name)return;const key=id||name;const item=m.get(key)||{id,name:name||id,value:0,rows:[]};if(!item.name&&name)item.name=name;item.value+=Number(r[valueKey])||0;item.rows.push(r);m.set(key,item)});return [...m.values()].sort((a,b)=>b.value-a.value);
+}
+function skuDrillHtml(sourceRows,valueKey,title){const data=grouped(sourceRows,"SKU",valueKey).sort((a,b)=>b.value-a.value);return `<div class="drill-panel"><div class="smalltitle">${esc(title)} — SKU Wise</div><div class="table-wrap"><table><thead><tr><th>SKU</th><th style="text-align:right">Value</th></tr></thead><tbody>${data.map(x=>`<tr><td>${esc(x.name)}</td><td class="num">${money(x.value)}</td></tr>`).join("")}</tbody></table></div></div>`}
+function multiSkuDrillHtml(item){const m=new Map(),add=(sourceRows,key,metric)=>sourceRows.forEach(r=>{const sku=String(r.SKU??"").trim();if(!sku)return;const x=m.get(sku)||{sku,primary:0,delivery:0,order:0};x[metric]+=Number(r[key])||0;m.set(sku,x)});add(item.rows.primary,"__PRIMARY_VALUE","primary");add(item.rows.delivery,"__DELIVERY_VALUE","delivery");add(item.rows.order,"__ORDER_VALUE","order");const data=[...m.values()].map(x=>({...x,gap:x.delivery-x.order})).sort((a,b)=>b.delivery-a.delivery);return `<div class="drill-panel"><div class="smalltitle">${esc(item.name)} — SKU Wise</div><div class="table-wrap"><table><thead><tr><th>SKU</th><th style="text-align:right">Primary</th><th style="text-align:right">Delivery</th><th style="text-align:right">Order</th><th style="text-align:right">Gap</th></tr></thead><tbody>${data.map(x=>`<tr><td>${esc(x.sku)}</td><td class="num">${money(x.primary)}</td><td class="num">${money(x.delivery)}</td><td class="num">${money(x.order)}</td><td class="num">${money(x.gap)}</td></tr>`).join("")}</tbody></table></div></div>`}
+
+function ensureDerivedFields(){
+ if(!DATA) return;
+ (DATA.Primary||[]).forEach(r=>{r.__PRIMARY_VALUE=columnValue(r,["DP Value"])});
+ (DATA.Delivery||[]).forEach(r=>{r.__DELIVERY_VALUE=columnValue(r,["IMS Value","IMS TK"])});
+ (DATA.Order||[]).forEach(r=>{r.__ORDER_VALUE=columnValue(r,["Order TK"])});
+ const map=new Map();
+ (DATA.Delivery||[]).forEach(r=>{ const area=String(r.Area??"").trim(); const zsm=String(r.level2name??"").trim(); if(area&&zsm&&!map.has(area)) map.set(area,zsm); });
+ const apply=(sheet)=>{ (DATA[sheet]||[]).forEach(r=>{ const area=String(r.Area??"").trim(); if(!r.__ZSM) r.__ZSM=map.get(area)||"Unknown"; }); };
+ apply("Primary"); apply("Delivery"); apply("Order");
+}
+
+function render(){
+ ensureDerivedFields();
+  const page=(location.hash||"#home").slice(1);
+  document.querySelectorAll(".nav a").forEach(a=>a.classList.toggle("active",a.dataset.page===page));
+  document.getElementById("updatedText").textContent="Updated: "+(UPDATED||"—");
+  if(!DATA && page!=="update"){ renderNoData(); return; }
+  ({home:renderHome,primary:renderPrimary,secondary:renderSecondary,order:renderOrder,stock:renderStock,asm:renderASM,zsm:renderZSM,sku:renderSKU,update:renderUpdate}[page]||renderHome)();
+}
+function shell(title,sub,body){document.getElementById("app").innerHTML=`<div class="title"><h1>${title}</h1>${sub?`<p>${sub}</p>`:""}</div>${body}`}
+function renderNoData(){shell("Sales Velocity","Upload today's Excel file to start.",`<div class="card empty">No data loaded. Open <b>Update Data</b> and choose the Excel file. The <b>Primary</b>, <b>Delivery</b>, <b>Order</b> and <b>Stock</b> sheets will be read; <b>XYZ</b> is ignored.</div>`)}
+function currentMonthStats(sheet,dateKey,valueKey){
+  const all=rows(sheet); const rd=rangeDates(all,dateKey); const max=rd.max;
+  const month=max?max.getMonth():new Date().getMonth(), year=max?max.getFullYear():new Date().getFullYear();
+  const todayRows=all.filter(r=>{let d=dateOnly(r[dateKey]);return d&&d.getTime()===max?.getTime()});
+  const first=new Date(year,month,1), end=max||new Date();
+  const working=[...Array(Math.floor((end-first)/86400000)+1)].map((_,i)=>new Date(year,month,1+i)).filter(d=>d<=end&&d.getDay()!==5&&d.getTime()!==end.getTime());
+  const monthRows=all.filter(r=>{let d=dateOnly(r[dateKey]);return d&&d>=first&&d<=end&&d.getDay()!==5&&d.getTime()!==end.getTime()});
+  return {total:sum(all,valueKey),today:sum(todayRows,valueKey),avg:working.length?sum(monthRows,valueKey)/working.length:0,days:working.length,date:max};
+}
+function renderHome(){
+ const d=currentMonthStats("Delivery","orderdate","__DELIVERY_VALUE"),o=currentMonthStats("Order","Order Date","__ORDER_VALUE"),p=currentMonthStats("Primary","Order Date","__PRIMARY_VALUE");
+ const groupByZone=(rs,valueKey)=>{const m=new Map();rs.forEach(r=>{const z=zoneOf(r);if(z)m.set(z,(m.get(z)||0)+(Number(r[valueKey])||0))});return m};
+ const zs=uniq([...rows("Primary"),...rows("Delivery"),...rows("Order")].map(zoneOf));
+ const primaryByZone=groupByZone(rows("Primary"),"__PRIMARY_VALUE"),deliveryByZone=groupByZone(rows("Delivery"),"__DELIVERY_VALUE"),orderByZone=groupByZone(rows("Order"),"__ORDER_VALUE");
+ const topZSM=zs.map(z=>({z,primary:primaryByZone.get(z)||0,delivery:deliveryByZone.get(z)||0,order:orderByZone.get(z)||0})).sort((a,b)=>b.primary-a.primary).slice(0,5);
+ shell("Sales Velocity","",`
+ <div class="grid3">
+ ${metric("Total Delivery Value",d.total)}${metric("Total Order Value",o.total)}${metric("Total Primary Value",p.total)}
+ ${metric("Day-wise Avg Delivery",d.avg,`${d.days} days this month (Fridays & today excluded)`)}
+ ${metric("Day-wise Avg Order",o.avg,`${o.days} days this month (Fridays & today excluded)`)}
+ ${metric("Day-wise Avg Primary",p.avg,`${p.days} days this month (Fridays & today excluded)`)}
+ </div>
+ <div class="three-tables">
+ ${table("SKU-wise total Delivery Value",grouped(rows("Delivery"),"SKU","__DELIVERY_VALUE"),"SKU","value")}
+ ${table("SKU-wise total Order Value",grouped(rows("Order"),"SKU","__ORDER_VALUE"),"SKU","value")}
+ ${table("SKU-wise total Primary Value",grouped(rows("Primary"),"SKU","__PRIMARY_VALUE"),"SKU","value")}
+ </div>
+ <div class="card table-card"><div class="smalltitle">Top 5 ZSMs — Primary, Delivery & Order Value</div><div class="table-wrap"><table><thead><tr><th>ZSM</th><th>Primary</th><th>Delivery</th><th>Order</th><th>Delivery − Order</th></tr></thead><tbody>
+ ${topZSM.map(x=>`<tr><td>${esc(x.z)}</td><td class="num">${money(x.primary)}</td><td class="num">${money(x.delivery)}</td><td class="num">${money(x.order)}</td><td class="num">${money(x.delivery-x.order)}</td></tr>`).join("")}</tbody></table></div></div>`);
+}
+function filterPanel(type){
+ const config={primary:{sheet:"Primary",date:"Order Date",value:"__PRIMARY_VALUE",view:false},secondary:{sheet:"Delivery",date:"orderdate",value:"__DELIVERY_VALUE",view:true},order:{sheet:"Order",date:"Order Date",value:"__ORDER_VALUE",view:true}}[type];
+ const rd=rangeDates(rows(config.sheet),config.date); const max=rd.max||new Date(), min=rd.min||new Date(new Date().getFullYear(),new Date().getMonth(),1);
+ const zones=uniq(rows(config.sheet).map(zoneOf));
+ const id=`${type}-`;
+ return `<div class="card filters" id="${id}filters">
+ <div class="row">
+ <div class="field"><label>From date</label>${dateInput(iso(min))}</div><div class="field"><label>To date</label>${dateInput(iso(max))}</div><div class="field action"><label>&nbsp;</label><button class="btn" id="${id}all">All dates</button></div>
+ </div>
+ <div class="row ${config.view?"":"two-cols"}" style="margin-top:14px">
+ ${config.view?`<div class="field"><label>View by</label><select id="${id}view"><option>DB</option><option>SO</option><option>SKU</option></select></div>`:""}
+ <div class="field"><label>Zone</label><select id="${id}zone"><option value="">Select zone</option>${zones.map(z=>`<option value="${esc(z)}">${esc(z)}</option>`).join("")}</select></div>
+ <div class="field"><label>Area</label><select id="${id}area" disabled><option value="">Select area</option></select></div>
+ </div></div><div id="${id}result" class="card notice">Select a zone and an area to see sales.</div>`;
+}
+function setupFilters(type){
+ const config={primary:{sheet:"Primary",date:"Order Date",value:"__PRIMARY_VALUE",view:false},secondary:{sheet:"Delivery",date:"orderdate",value:"__DELIVERY_VALUE",view:true},order:{sheet:"Order",date:"Order Date",value:"__ORDER_VALUE",view:true}}[type];
+ const pre=document.getElementById(type+"-filters"), inputs=pre.querySelectorAll("input"); const from=inputs[0],to=inputs[1], zone=document.getElementById(type+"-zone"),area=document.getElementById(type+"-area"),result=document.getElementById(type+"-result"),view=document.getElementById(type+"-view");
+ const updateAreas=()=>{const areas=uniq(rows(config.sheet).filter(r=>zoneOf(r)===zone.value).map(r=>r.Area));area.disabled=!zone.value;area.innerHTML=`<option value="">Select area</option>`+areas.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join("")};
+ const update=()=>{ if(!zone.value||!area.value){result.innerHTML="Select a zone and an area to see sales.";return}
+  let rs=filterRows(config.sheet,config.date,from.value?new Date(from.value+"T00:00:00"):null,to.value?new Date(to.value+"T23:59:59"):null,zone.value,area.value);
+  const selectedView=type==="primary"?"DB":(view?.value||"DB"),valueLabel=type==="primary"?"DP Value":type==="secondary"?"IMS Value":"Order TK";
+  if(selectedView==="SKU"){
+   const g=grouped(rs,"SKU",config.value).sort((a,b)=>b.value-a.value);result.innerHTML=`<div class="smalltitle">${esc(area.value)} — ${esc(zone.value)} <span class="tag">${money(sum(rs,config.value))}</span></div><div class="table-wrap tall"><table><thead><tr><th>SKU</th><th style="text-align:right">${valueLabel}</th></tr></thead><tbody>${g.map(x=>`<tr><td>${esc(x.name)}</td><td class="num">${money(x.value)}</td></tr>`).join("")}</tbody></table></div>`;return
+  }
+  const groups=entityGroups(rs,selectedView,config.value);
+  result.innerHTML=`<div class="smalltitle">${esc(area.value)} — ${esc(zone.value)} <span class="tag">${money(sum(rs,config.value))}</span></div><div class="table-wrap tall"><table><thead><tr><th>${selectedView} ID</th><th>${selectedView} Name</th><th style="text-align:right">${valueLabel}</th></tr></thead><tbody>${groups.map((x,i)=>`<tr><td>${esc(x.id||"—")}</td><td><button class="drill-link" data-index="${i}">${esc(x.name)}</button></td><td class="num">${money(x.value)}</td></tr>`).join("")}</tbody></table></div><div id="${type}-drill"></div>`;
+  result.querySelectorAll(".drill-link").forEach(button=>button.onclick=()=>{const item=groups[Number(button.dataset.index)];document.getElementById(type+"-drill").innerHTML=skuDrillHtml(item.rows,config.value,item.name)});
+ };
+ zone.addEventListener("change",()=>{updateAreas();update()});area.addEventListener("change",update);from.addEventListener("change",update);to.addEventListener("change",update);view?.addEventListener("change",update);
+ document.getElementById(type+"-all").onclick=()=>{const rd=rangeDates(rows(config.sheet),config.date);from.value=iso(rd.min);to.value=iso(rd.max);update()};
+}
+function renderPrimary(){let s=currentMonthStats("Primary","Order Date","__PRIMARY_VALUE");shell("Primary","DP Value — zone, area, DB and SKU wise",`<div class="grid2">${metric("Total DP Value (Whole File)",s.total)}${metric(`Today's DP Value — ${iso(s.date)}`,s.today)}</div>${filterPanel("primary")}`);setupFilters("primary")}
+function renderSecondary(){let s=currentMonthStats("Delivery","orderdate","__DELIVERY_VALUE");shell("Delivery","IMS Value — zone, area, DB / SO and SKU wise",`<div class="grid2">${metric("Total IMS Value (Whole File)",s.total)}${metric(`Today's IMS Value — ${iso(s.date)}`,s.today)}</div>${filterPanel("secondary")}`);setupFilters("secondary")}
+function renderOrder(){let s=currentMonthStats("Order","Order Date","__ORDER_VALUE");shell("Order","Order TK — zone, area, DB / SO and SKU wise",`<div class="grid2">${metric("Total Order TK (Whole File)",s.total)}${metric(`Today's Order TK — ${iso(s.date)}`,s.today)}</div>${filterPanel("order")}`);setupFilters("order")}
+function renderASM(){
+ const areas=uniq([...rows("Primary"),...rows("Delivery"),...rows("Order")].map(r=>r.Area));
+ const dateRanges=[rangeDates(rows("Primary"),"Order Date"),rangeDates(rows("Delivery"),"orderdate"),rangeDates(rows("Order"),"Order Date")];
+ const mins=dateRanges.map(x=>x.min).filter(Boolean),maxs=dateRanges.map(x=>x.max).filter(Boolean),min=mins.length?new Date(Math.min(...mins)):null,max=maxs.length?new Date(Math.max(...maxs)):null;
+ shell("ASM","Area performance — DB wise or SO wise",`<div class="card filters" id="asm-filters">
+ <div class="row"><div class="field"><label>Area</label><select id="asm-area"><option value="">Select area</option>${areas.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join("")}</select></div><div class="field"><label>View by</label><select id="asm-view"><option value="DB">DB Wise</option><option value="SO">SO Wise</option></select></div><div class="field action"><label>&nbsp;</label><button class="btn" id="asm-all">All dates</button></div></div>
+ <div class="row two-cols" style="margin-top:14px"><div class="field"><label>From date</label>${dateInput(iso(min))}</div><div class="field"><label>To date</label>${dateInput(iso(max))}</div></div></div>
+ <div id="asm-result" class="card notice">Select an area to see Primary, Delivery, Order and Gap.</div>`);
+ const panel=document.getElementById("asm-filters"),dates=panel.querySelectorAll('input[type="date"]'),from=dates[0],to=dates[1],area=document.getElementById("asm-area"),view=document.getElementById("asm-view"),result=document.getElementById("asm-result");
+ const update=()=>{
+  if(!area.value){result.innerHTML="Select an area to see Primary, Delivery, Order and Gap.";return}
+  const f=from.value?new Date(from.value+"T00:00:00"):null,t=to.value?new Date(to.value+"T23:59:59"):null,isDB=view.value==="DB";
+  const entity=isDB?"DB":"SO",specs=[{sheet:"Primary",date:"Order Date",value:"__PRIMARY_VALUE",metric:"primary"},{sheet:"Delivery",date:"orderdate",value:"__DELIVERY_VALUE",metric:"delivery"},{sheet:"Order",date:"Order Date",value:"__ORDER_VALUE",metric:"order"}];
+  const combined=new Map();
+  specs.forEach(s=>filterRows(s.sheet,s.date,f,t,"",area.value).forEach(r=>{const id=columnText(r,[entity+" ID"]),name=columnText(r,[entity+" Name"]);if(!id&&!name)return;const key=id||name,item=combined.get(key)||{id,name:name||id,primary:0,delivery:0,order:0,rows:{primary:[],delivery:[],order:[]}};item[s.metric]+=Number(r[s.value])||0;item.rows[s.metric].push(r);combined.set(key,item)}));
+  const data=[...combined.values()].map(x=>({...x,gap:x.delivery-x.order})).sort((a,b)=>b.delivery-a.delivery);
+  result.innerHTML=`<div class="smalltitle">${esc(area.value)} — ${isDB?"DB Wise":"SO Wise"}</div><div class="table-wrap tall"><table><thead><tr><th>${entity} ID</th><th>${entity} Name</th><th style="text-align:right">Primary</th><th style="text-align:right">Delivery</th><th style="text-align:right">Order</th><th style="text-align:right">Gap</th></tr></thead><tbody>${data.map((x,i)=>`<tr><td>${esc(x.id||"—")}</td><td><button class="drill-link" data-index="${i}">${esc(x.name)}</button></td><td class="num">${money(x.primary)}</td><td class="num">${money(x.delivery)}</td><td class="num">${money(x.order)}</td><td class="num">${money(x.gap)}</td></tr>`).join("")}</tbody></table></div><div id="asm-drill"></div>`;
+  result.querySelectorAll(".drill-link").forEach(button=>button.onclick=()=>{document.getElementById("asm-drill").innerHTML=multiSkuDrillHtml(data[Number(button.dataset.index)])});
+ };
+ area.addEventListener("change",update);view.addEventListener("change",update);from.addEventListener("change",update);to.addEventListener("change",update);document.getElementById("asm-all").onclick=()=>{from.value=iso(min);to.value=iso(max);update()};
+}
+function renderZSM(){
+ const allSheets=[{sheet:"Primary",date:"Order Date",value:"__PRIMARY_VALUE",metric:"primary"},{sheet:"Delivery",date:"orderdate",value:"__DELIVERY_VALUE",metric:"delivery"},{sheet:"Order",date:"Order Date",value:"__ORDER_VALUE",metric:"order"}];
+ const zones=uniq([...rows("Primary"),...rows("Delivery"),...rows("Order")].map(zoneOf));
+ const dateRanges=allSheets.map(s=>rangeDates(rows(s.sheet),s.date)),mins=dateRanges.map(x=>x.min).filter(Boolean),maxs=dateRanges.map(x=>x.max).filter(Boolean),min=mins.length?new Date(Math.min(...mins)):null,max=maxs.length?new Date(Math.max(...maxs)):null;
+ shell("ZSM","Zone performance — Area, SO or DB wise",`<div class="card filters" id="zsm-filters">
+ <div class="row"><div class="field"><label>Zone</label><select id="zsm-zone"><option value="">Select zone</option>${zones.map(z=>`<option value="${esc(z)}">${esc(z)}</option>`).join("")}</select></div></div>
+ <div class="row two-cols" style="margin-top:14px"><div class="field"><label>From date</label>${dateInput(iso(min))}</div><div class="field"><label>To date</label>${dateInput(iso(max))}</div></div>
+ <div class="row" style="margin-top:14px"><div class="field"><label>View report by</label><select id="zsm-view"><option value="Area">Area Wise</option><option value="SO">SO Wise</option><option value="DB">DB Wise</option></select></div><div class="field action"><label>&nbsp;</label><button class="btn" id="zsm-all">All dates</button></div></div></div>
+ <div id="zsm-result" class="card notice">Select a zone to see Primary, Delivery, Order and Gap.</div>`);
+ const panel=document.getElementById("zsm-filters"),dates=panel.querySelectorAll('input[type="date"]'),from=dates[0],to=dates[1],zone=document.getElementById("zsm-zone"),view=document.getElementById("zsm-view"),result=document.getElementById("zsm-result");
+ const update=()=>{
+  if(!zone.value){result.className="card notice";result.innerHTML="Select a zone to see Primary, Delivery, Order and Gap.";return}
+  const f=from.value?new Date(from.value+"T00:00:00"):null,t=to.value?new Date(to.value+"T23:59:59"):null,entity=view.value,combined=new Map();
+  allSheets.forEach(s=>filterRows(s.sheet,s.date,f,t,zone.value,"").forEach(r=>{
+   const id=entity==="Area"?"":columnText(r,[entity+" ID"]),name=entity==="Area"?String(r.Area||"").trim():columnText(r,[entity+" Name"]);if(!id&&!name)return;
+   const key=id||name,item=combined.get(key)||{id,name:name||id,primary:0,delivery:0,order:0,rows:{primary:[],delivery:[],order:[]}};
+   item[s.metric]+=Number(r[s.value])||0;item.rows[s.metric].push(r);combined.set(key,item);
+  }));
+  const data=[...combined.values()].map(x=>({...x,gap:x.delivery-x.order})).sort((a,b)=>b.delivery-a.delivery),nameHeader=entity==="Area"?"Area":entity+" Name",idHeader=entity==="Area"?"":`<th>${entity} ID</th>`;
+  result.className="card";
+  result.innerHTML=`<div class="smalltitle">${esc(zone.value)} — ${esc(entity)} Wise</div><div class="table-wrap tall"><table><thead><tr>${idHeader}<th>${nameHeader}</th><th style="text-align:right">Primary</th><th style="text-align:right">Delivery</th><th style="text-align:right">Order</th><th style="text-align:right">Gap</th></tr></thead><tbody>${data.map((x,i)=>`<tr>${entity==="Area"?"":`<td>${esc(x.id||"—")}</td>`}<td><button class="drill-link" data-index="${i}">${esc(x.name)}</button></td><td class="num">${money(x.primary)}</td><td class="num">${money(x.delivery)}</td><td class="num">${money(x.order)}</td><td class="num">${money(x.gap)}</td></tr>`).join("")}</tbody></table></div><div id="zsm-drill"></div>`;
+  result.querySelectorAll(".drill-link").forEach(button=>button.onclick=()=>{document.getElementById("zsm-drill").innerHTML=multiSkuDrillHtml(data[Number(button.dataset.index)])});
+ };
+ zone.addEventListener("change",update);view.addEventListener("change",update);from.addEventListener("change",update);to.addEventListener("change",update);document.getElementById("zsm-all").onclick=()=>{from.value=iso(min);to.value=iso(max);update()};
+}
+function renderStock(){
+ const products=rows("Stock").map(r=>({sku:columnText(r,["SKU"]),code:columnText(r,["SKU Code"]),name:columnText(r,["SKU Name"]),dp:columnValue(r,["Total Value in DP"]),tp:columnValue(r,["Total Value in TP"]),carton:columnValue(r,["PCS per Carton"])})).filter(r=>r.code||r.name);
+ const categories=uniq(products.map(r=>r.sku));
+ shell("Stock","Stock values from the uploaded Stock sheet.",`<div class="card filters"><div class="row two-cols"><div class="field"><label for="stock-sku">SKU</label><select id="stock-sku"><option value="">Select SKU</option>${categories.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("")}</select></div><div class="field"><label for="stock-name">SKU Name</label><select id="stock-name" disabled><option value="">Select SKU Name</option></select></div></div></div><div id="stock-cards" class="grid3" style="margin-top:16px"></div><div id="stock-result"></div>`);
+ const sku=document.getElementById("stock-sku"),name=document.getElementById("stock-name"),cards=document.getElementById("stock-cards"),result=document.getElementById("stock-result");
+ const populateNames=()=>{const available=products.filter(r=>r.sku===sku.value).sort((a,b)=>a.name.localeCompare(b.name));name.innerHTML=`<option value="">Select SKU Name</option>${available.map(r=>`<option value="${esc(r.code)}">${esc(r.name)} [${esc(r.code)}]</option>`).join("")}`;name.disabled=!sku.value};
+ const update=()=>{
+  const selected=products.find(r=>r.sku===sku.value&&r.code===name.value);
+  const list=(selected?[selected]:products.filter(r=>r.sku===sku.value)).sort((a,b)=>b.dp-a.dp);
+  cards.innerHTML=selected?`${metric("Total Value in DP",selected.dp)}${metric("Total Value in TP",selected.tp)}${metric("PCS per Carton",selected.carton)}`:"";
+  result.innerHTML=sku.value?`<div class="card table-card"><div class="smalltitle">${esc(selected?selected.name:sku.value)} — Stock</div><div class="table-wrap tall"><table><thead><tr><th>SKU Code</th><th>SKU Name</th><th style="text-align:right">Total Value in DP</th><th style="text-align:right">Total Value in TP</th><th style="text-align:right">PCS per Carton</th></tr></thead><tbody>${list.map(r=>`<tr><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td class="num">${money(r.dp)}</td><td class="num">${money(r.tp)}</td><td class="num">${num(r.carton)}</td></tr>`).join("")||`<tr><td colspan="5">No stock data found.</td></tr>`}</tbody></table></div></div>`:`<div class="card notice" style="margin-top:16px">Select a SKU, then a SKU Name to see its stock values.</div>`;
+ };
+ sku.addEventListener("change",()=>{populateNames();update()});name.addEventListener("change",update);populateNames();update();
+}
+function renderSKU(){
+ const products=new Map();
+ [...rows("Primary"),...rows("Delivery"),...rows("Order")].forEach(r=>{const sku=String(r.SKU||"").trim(),code=columnText(r,["SKU Code"]),name=columnText(r,["SKU Name"]);if(code&&!products.has(code))products.set(code,{sku,name:name||code})});
+ const stockByCode=new Map(rows("Stock").map(r=>[columnText(r,["SKU Code"]),r]));
+ const productOptions=[...products].map(([code,item])=>({code,sku:item.sku,name:item.name,display:`${item.name} [${code}]`})).sort((a,b)=>a.name.localeCompare(b.name));
+ const skuOptions=uniq(productOptions.map(x=>x.sku));
+ const specs={Primary:{sheet:"Primary",date:"Order Date",value:"__PRIMARY_VALUE"},Delivery:{sheet:"Delivery",date:"orderdate",value:"__DELIVERY_VALUE"},Order:{sheet:"Order",date:"Order Date",value:"__ORDER_VALUE"}};
+ const ranges=Object.values(specs).map(s=>rangeDates(rows(s.sheet),s.date)),mins=ranges.map(x=>x.min).filter(Boolean),maxs=ranges.map(x=>x.max).filter(Boolean),min=mins.length?new Date(Math.min(...mins)):null,max=maxs.length?new Date(Math.max(...maxs)):null;
+ shell("SKU","Find the areas, DBs or SOs that did not take a selected product.",`<div class="card filters" id="sku-filters">
+ <div class="row two-cols"><div class="field"><label>SKU</label><select id="sku-category"><option value="">Select SKU</option>${skuOptions.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("")}</select></div><div class="field"><label>SKU Name</label><select id="sku-product" disabled><option value="">Select SKU Name</option></select></div></div>
+ <div id="sku-stock-value" style="margin-top:14px" aria-live="polite"></div>
+ <div class="row two-cols" style="margin-top:14px"><div class="field"><label>From date</label>${dateInput(iso(min))}</div><div class="field"><label>To date</label>${dateInput(iso(max))}</div></div>
+ <div class="row" style="margin-top:14px"><div class="field"><label>View by</label><select id="sku-entity"><option value="Area">Area Wise</option><option value="DB">DB Wise</option><option value="SO">SO Wise</option></select></div><div class="field" id="sku-area-field" style="display:none"><label>Area</label><select id="sku-area"><option value="">Select area</option></select></div><div class="field"><label>Sales type</label><select id="sku-metric"><option value="Primary">Primary</option><option value="Delivery">Delivery</option><option value="Order">Order</option></select></div><div class="field action"><label>&nbsp;</label><button class="btn" id="sku-all">All dates</button></div></div></div>
+ <div id="sku-result" class="card notice">Select a SKU to see which entities did not take it.</div>`);
+ const panel=document.getElementById("sku-filters"),dates=panel.querySelectorAll('input[type="date"]'),from=dates[0],to=dates[1],skuCategory=document.getElementById("sku-category"),product=document.getElementById("sku-product"),entity=document.getElementById("sku-entity"),metric=document.getElementById("sku-metric"),area=document.getElementById("sku-area"),areaField=document.getElementById("sku-area-field"),stockValue=document.getElementById("sku-stock-value"),result=document.getElementById("sku-result");
+ const populateProducts=()=>{const filtered=productOptions.filter(x=>x.sku===skuCategory.value);product.innerHTML=`<option value="">Select SKU Name</option>${filtered.map(x=>`<option value="${esc(x.code)}">${esc(x.display)}</option>`).join("")}`;product.disabled=!skuCategory.value};
+ const updateStockValue=()=>{const code=product.value.trim(),stock=stockByCode.get(code);stockValue.innerHTML=!code?"":stock?`<div class="card metric"><div class="label">Total Value in DP</div><div class="value">${money(columnValue(stock,["Total Value in DP"]))}</div></div>`:`<div class="card notice">This SKU Code was not found in the Stock sheet.</div>`};
+ const populateAreas=()=>{const current=area.value,list=uniq(rows(specs[metric.value].sheet).map(r=>r.Area));if(current&&!list.includes(current))list.push(current);list.sort((a,b)=>a.localeCompare(b));area.innerHTML=`<option value="">Select area</option>${list.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join("")}`;if(current)area.value=current};
+ const toggleArea=()=>{const needed=entity.value!=="Area";areaField.style.display=needed?"block":"none";if(!needed)area.value=""};
+ const update=()=>{
+  if(!skuCategory.value){result.className="card notice";result.innerHTML="Select SKU first, then select SKU Name.";return}
+  const code=product.value.trim();
+  if(!code){result.className="card notice";result.innerHTML="Select SKU Name from the dropdown menu.";return}
+  const selected=productOptions.find(x=>x.code===code),chosen=specs[metric.value];
+  if(metric.value==="Primary"&&entity.value==="SO"){result.className="card notice";result.innerHTML="SO Wise Primary is not available because the Primary sheet has no SO ID or SO Name.";return}
+  if(entity.value!=="Area"&&!area.value){result.className="card notice";result.innerHTML="Select an area to see the DB Wise or SO Wise report.";return}
+  const f=from.value?new Date(from.value+"T00:00:00"):null,t=to.value?new Date(to.value+"T23:59:59"):null,inRange=filterRows(chosen.sheet,chosen.date,f,t,"",entity.value==="Area"?"":area.value),universe=new Map(),taken=new Set();
+  inRange.forEach(r=>{
+   const id=entity.value==="Area"?"":columnText(r,[entity.value+" ID"]),name=entity.value==="Area"?String(r.Area||"").trim():columnText(r,[entity.value+" Name"]);if(!id&&!name)return;
+   const key=id||name;if(!universe.has(key))universe.set(key,{id,name:name||id});
+   if(columnText(r,["SKU Code"])===code&&(Number(r[chosen.value])||0)>0)taken.add(key);
+  });
+  const missing=[...universe].filter(([key])=>!taken.has(key)).map(([,item])=>item).sort((a,b)=>a.name.localeCompare(b.name));
+  if(!universe.size){result.className="card notice";result.innerHTML="No active entities were found for the selected sales type and date range.";return}
+  const idHeader=entity.value==="Area"?"":`<th>${entity.value} ID</th>`;
+  result.className="card";
+  result.innerHTML=`<div class="smalltitle">${esc(selected.name)} [${esc(code)}] — ${esc(metric.value)} not taken by ${esc(entity.value)}${entity.value==="Area"?"":` in ${esc(area.value)}`}</div><div class="home-meta"><strong>${missing.length}</strong> of ${universe.size} active ${esc(entity.value)} entries did not take this SKU in the selected date range.</div><div class="table-wrap tall" style="margin-top:12px"><table><thead><tr>${idHeader}<th>${entity.value==="Area"?"Area":entity.value+" Name"}</th><th style="text-align:right">${esc(metric.value)} Value</th><th>Status</th></tr></thead><tbody>${missing.map(x=>`<tr>${entity.value==="Area"?"":`<td>${esc(x.id||"—")}</td>`}<td>${esc(x.name)}</td><td class="num">0</td><td><span class="tag">Not taken</span></td></tr>`).join("")||`<tr><td colspan="${entity.value==="Area"?3:4}">Every active ${esc(entity.value)} took this SKU.</td></tr>`}</tbody></table></div>`;
+ };
+ populateAreas();toggleArea();skuCategory.addEventListener("change",()=>{populateProducts();updateStockValue();update()});product.addEventListener("change",()=>{updateStockValue();update()});entity.addEventListener("change",()=>{toggleArea();update()});area.addEventListener("change",update);metric.addEventListener("change",()=>{populateAreas();update()});from.addEventListener("change",update);to.addEventListener("change",update);document.getElementById("sku-all").onclick=()=>{from.value=iso(min);to.value=iso(max);update()};
+}
+function renderUpdate(){
+ shell("Update data","Pick today's Excel file — publish it online, or download a ready index.html.",`
+ <div class="card upload"><input id="file" type="file" accept=".xlsx,.xls,.xlsb"><div class="help">The file must contain the sheets <b>Primary</b>, <b>Delivery</b>, <b>Order</b> and <b>Stock</b>. Both .xlsx and .xlsb files are supported. The <b>XYZ</b> sheet is ignored because it is only a calculation/reference file.</div><div id="status" class="status${PENDING_EXCEL?' show':''}">${PENDING_EXCEL?`Ready to publish: ${esc(PENDING_EXCEL.name)} (${(PENDING_EXCEL.size/1048576).toFixed(1)} MB)`:''}</div>
+ <div class="publish-box"><h3>Publish to GitHub</h3><p>This creates an optimized <b>Data.json</b> in your repository. GitHub Pages will then load the dashboard much faster at the same website link.</p><div class="publish-grid">
+ <div><label>Repository owner</label><input id="gh-owner" autocomplete="username"></div><div><label>Repository name</label><input id="gh-repo"></div>
+ <div><label>Branch</label><input id="gh-branch" value="main"></div><div><label>Optimized data path</label><input id="gh-path" value="Data.json"></div>
+ <div class="wide"><label>Fine-grained GitHub token (Contents: Read and write)</label><input id="gh-token" type="password" autocomplete="off" placeholder="github_pat_…"></div></div>
+ <div class="publish-actions"><button id="publish" class="btn dark" ${PENDING_EXCEL?'':'disabled'}>Publish online</button><button id="download" class="btn" ${DATA?'':'disabled'}>Download ready index.html</button><button id="clear" class="btn">Clear data</button></div>
+ <p class="security">Your token is used only for this publish request and is not saved in the page or browser storage.</p></div></div>`);
+ const saved=JSON.parse(localStorage.getItem("salesVelocityGitHub")||"{}"); const inferred=inferGitHubRepo();
+ document.getElementById("gh-owner").value=saved.owner||inferred.owner||""; document.getElementById("gh-repo").value=saved.repo||inferred.repo||""; document.getElementById("gh-branch").value=saved.branch||"main"; document.getElementById("gh-path").value=saved.path&&!/\.xlsx?$/i.test(saved.path)?saved.path:"Data.json";
+ document.getElementById("file").onchange=handleFile;
+ document.getElementById("publish").onclick=publishToGitHub;
+ document.getElementById("download").onclick=downloadReady;
+ document.getElementById("clear").onclick=()=>{DATA=null;UPDATED=null;PENDING_EXCEL=null;render()};
+}
+async function handleFile(e){
+ const file=e.target.files[0];if(!file)return; const status=document.getElementById("status");status.className="status show";status.textContent="Reading Primary, Delivery, Order and Stock sheets…";
+ try{await loadSheetJS()}catch(err){status.className="status show error";status.textContent=err.message;return}
+ const reader=new FileReader();reader.onload=ev=>{
+  try{
+   const wb=XLSX.read(ev.target.result,{type:"array",cellDates:true});
+   const missing=REQUIRED.filter(s=>!wb.SheetNames.includes(s));if(missing.length)throw new Error("Missing required sheet(s): "+missing.join(", "));
+   const out={}; REQUIRED.forEach(s=>out[s]=XLSX.utils.sheet_to_json(wb.Sheets[s],{defval:null,raw:true}));
+   DATA=compactData(out);PENDING_EXCEL=file;UPDATED=new Date().toLocaleString("en-US",{weekday:"long",day:"numeric",month:"short",year:"numeric",hour:"numeric",minute:"2-digit"});
+   render(); const fresh=document.getElementById("status"); fresh.textContent=`Loaded successfully. ${out.Primary.length.toLocaleString()} Primary rows, ${out.Delivery.length.toLocaleString()} Delivery rows, ${out.Order.length.toLocaleString()} Order rows and ${out.Stock.length.toLocaleString()} Stock rows. Ready to publish.`;
+  }catch(err){status.className="status show error";status.textContent=err.message}
+ };reader.readAsArrayBuffer(file);
+}
+function inferGitHubRepo(){
+ const host=location.hostname.toLowerCase(); if(!host.endsWith(".github.io"))return {owner:"",repo:""};
+ const owner=host.slice(0,-10), first=location.pathname.split("/").filter(Boolean)[0]; return {owner,repo:first||owner+".github.io"};
+}
+function bufferToBase64(buffer){
+ const bytes=new Uint8Array(buffer), chunk=0x8000; let binary=""; for(let i=0;i<bytes.length;i+=chunk) binary+=String.fromCharCode(...bytes.subarray(i,i+chunk)); return btoa(binary);
+}
+async function ghRequest(url,token,options={}){
+ const response=await fetch(url,{...options,headers:{Accept:"application/vnd.github+json",Authorization:`Bearer ${token}`,"X-GitHub-Api-Version":"2022-11-28",...(options.headers||{})}});
+ const body=await response.json().catch(()=>({})); if(!response.ok)throw new Error(body.message||`GitHub request failed (${response.status})`); return body;
+}
+async function publishToGitHub(){
+ if(!PENDING_EXCEL)return; const owner=document.getElementById("gh-owner").value.trim(),repo=document.getElementById("gh-repo").value.trim(),branch=document.getElementById("gh-branch").value.trim(),path=document.getElementById("gh-path").value.trim(),token=document.getElementById("gh-token").value.trim(),status=document.getElementById("status"),button=document.getElementById("publish");
+ if(!owner||!repo||!branch||!path||!token){status.className="status show error";status.textContent="Complete all GitHub fields before publishing.";return}
+ button.disabled=true; status.className="status show";
+ try{
+  localStorage.setItem("salesVelocityGitHub",JSON.stringify({owner,repo,branch,path})); status.textContent="Preparing optimized dashboard data…";
+  const api=`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`, ref=await ghRequest(`${api}/git/ref/heads/${encodeURIComponent(branch)}`,token), parentSha=ref.object.sha;
+  status.textContent="Uploading optimized data to GitHub…"; const json=JSON.stringify({updated:UPDATED,...encodeWire(DATA)}),content=bufferToBase64(new TextEncoder().encode(json).buffer); const blob=await ghRequest(`${api}/git/blobs`,token,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({content,encoding:"base64"})});
+  const parent=await ghRequest(`${api}/git/commits/${parentSha}`,token); const tree=await ghRequest(`${api}/git/trees`,token,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({base_tree:parent.tree.sha,tree:[{path,mode:"100644",type:"blob",sha:blob.sha}]})});
+  const commit=await ghRequest(`${api}/git/commits`,token,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:`Update ${path} from Sales Velocity`,tree:tree.sha,parents:[parentSha]})});
+  await ghRequest(`${api}/git/refs/heads/${encodeURIComponent(branch)}`,token,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({sha:commit.sha,force:false})});
+  status.textContent="Published successfully. GitHub Pages may take a minute or two to show the update."; PENDING_EXCEL=null; document.getElementById("gh-token").value="";
+ }catch(err){status.className="status show error";status.textContent="Publish failed: "+err.message}finally{button.disabled=!PENDING_EXCEL}
+}
+function downloadReady(){
+ if(!DATA)return;
+ const html=document.documentElement.outerHTML;
+ const injection=`<script>window.__EMBEDDED_DATA__=${JSON.stringify(DATA).replace(/<\//g,"<\\\\/")};window.__EMBEDDED_UPDATED__=${JSON.stringify(UPDATED)};<\/script>`;
+ const ready=html.replace("</body>",injection+"</body>");
+ const blob=new Blob(["<!doctype html>\n"+ready],{type:"text/html;charset=utf-8"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="index.html";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+window.addEventListener("hashchange",render);
+
+async function startDashboard(){
+  if(!DATA){
+    await loadOnlineData();
+  }
+  render();
+}
+function showDashboard(){document.getElementById("loginOverlay").style.display="none";document.getElementById("siteHeader").classList.remove("app-locked");document.getElementById("app").classList.remove("app-locked");startDashboard()}
+let alreadySignedIn=false;try{alreadySignedIn=sessionStorage.getItem("salesVelocitySignedIn")==="yes"}catch(e){}
+if(alreadySignedIn){showDashboard()}else{
+ document.getElementById("loginForm").addEventListener("submit",e=>{e.preventDefault();const username=document.getElementById("loginUsername").value,password=document.getElementById("loginPassword").value,error=document.getElementById("loginError");if(username==="deliaci"&&password==="mr.1234"){try{sessionStorage.setItem("salesVelocitySignedIn","yes")}catch(e){}error.classList.remove("show");showDashboard()}else{error.classList.add("show");document.getElementById("loginPassword").value="";document.getElementById("loginPassword").focus()}});
+}
+</script>
+</body>
+</html>
