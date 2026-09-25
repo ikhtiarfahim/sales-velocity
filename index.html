@@ -1085,7 +1085,7 @@ tbody tr:hover{background:#2b0740 !important}
  <div class="login-error" id="loginError">Incorrect username or password.</div><button class="btn dark" type="submit">Log In</button></form>
 </div>
 <header class="top app-locked" id="siteHeader"><nav class="nav" aria-label="Main navigation"><div class="nav-brand"><img src="deli-seeklogo.png" alt="Deli"></div>
-<a href="#home" data-page="home">Home</a><a href="#my-day" data-page="my-day">My Day</a><a href="#zsm" data-page="zsm">ZSM</a><a href="#asm" data-page="asm">ASM</a><a href="#sku-sales" data-page="sku-sales">SKU Sales</a><a href="#sku" data-page="sku">Zero SKU</a><a href="#stock" data-page="stock">Stock</a><a href="#primary" data-page="primary">Primary</a><a href="#secondary" data-page="secondary">Secondary</a><a href="#order" data-page="order">Order</a><a href="#update" data-page="update">Update Data</a>
+<a href="#home" data-page="home">Home</a><a href="#my-day" data-page="my-day">My Day</a><a href="#month-status" data-page="month-status">Month Status</a><a href="#zsm" data-page="zsm">ZSM</a><a href="#asm" data-page="asm">ASM</a><a href="#sku-sales" data-page="sku-sales">SKU Sales</a><a href="#sku" data-page="sku">Zero SKU</a><a href="#stock" data-page="stock">Stock</a><a href="#primary" data-page="primary">Primary</a><a href="#secondary" data-page="secondary">Secondary</a><a href="#order" data-page="order">Order</a><a href="#update" data-page="update">Update Data</a>
 <span class="updated" id="updatedText">Updated: —</span>
 </nav></header>
 <main id="app" class="app-locked"></main>
@@ -1531,7 +1531,7 @@ function render(){
   document.querySelectorAll(".nav a").forEach(a=>a.classList.toggle("active",a.dataset.page===page));
   document.getElementById("updatedText").textContent="Updated: "+(UPDATED||"—");
   if(!DATA && page!=="update"){ renderNoData(); syncHomeOrderTicker(page); return; }
-  ({home:renderHome,"my-day":renderMyDay,primary:renderPrimary,secondary:renderSecondary,order:renderOrder,stock:renderStock,asm:renderASM,zsm:renderZSM,"sku-sales":renderSKUSales,sku:renderSKU,update:renderUpdate}[page]||renderHome)();
+  ({home:renderHome,"my-day":renderMyDay,"month-status":renderMonthStatus,primary:renderPrimary,secondary:renderSecondary,order:renderOrder,stock:renderStock,asm:renderASM,zsm:renderZSM,"sku-sales":renderSKUSales,sku:renderSKU,update:renderUpdate}[page]||renderHome)();
   syncHomeOrderTicker(page);
 }
 
@@ -1918,6 +1918,154 @@ function myDayStockNameMap(sku){
  });
  return map;
 }
+
+function renderMonthStatus(){
+ ensureDerivedFields();
+ shell("Month Status","SKU-wise / SO-wise daily monthly status with daily totals and month total",`
+  <div class="card month-status-controls month-status-controls-v2">
+   <div class="month-status-filter-grid">
+    <div class="field month-status-view-field">
+     <label for="month-status-view">View By</label>
+     <select id="month-status-view">
+      <option value="primary">Primary</option>
+      <option value="secondary">Secondary</option>
+      <option value="order">Order</option>
+     </select>
+    </div>
+    <div class="field month-status-arrange-field">
+     <label for="month-status-arrange">Arrange By</label>
+     <select id="month-status-arrange">
+      <option value="product">Product Wise</option>
+      <option value="so">SO Wise</option>
+     </select>
+    </div>
+    <div class="field month-status-area-field">
+     <label for="month-status-area">Area Wise</label>
+     <select id="month-status-area"><option value="">All Area</option></select>
+    </div>
+   </div>
+   <div class="month-status-total-card" id="month-status-total-card">
+    <span class="month-total-card-label">Total Primary Value</span>
+    <strong>0</strong>
+    <small>All Area · Product Wise</small>
+   </div>
+   <div class="month-status-period" id="month-status-period"></div>
+  </div>
+  <div class="card month-status-card">
+   <div class="table-wrap month-status-wrap">
+    <table class="month-status-table" id="month-status-table"></table>
+   </div>
+  </div>`);
+
+ const view=document.getElementById("month-status-view");
+ const arrange=document.getElementById("month-status-arrange");
+ const area=document.getElementById("month-status-area");
+ const table=document.getElementById("month-status-table");
+ const period=document.getElementById("month-status-period");
+ const totalCard=document.getElementById("month-status-total-card");
+
+ const configs={
+  primary:{sheet:"Primary",date:"Order Date",value:"__PRIMARY_VALUE",label:"Primary"},
+  secondary:{sheet:"Delivery",date:"orderdate",value:"__DELIVERY_VALUE",label:"Secondary"},
+  order:{sheet:"Order",date:"Order Date",value:"__ORDER_VALUE",label:"Order"}
+ };
+
+ const updateAreas=()=>{
+  const config=configs[view.value]||configs.primary;
+  const previous=area.value;
+  const areas=sortAreasInRequestedOrder(uniq(rows(config.sheet).map(r=>String(r.Area||"").trim()).filter(Boolean)));
+  area.innerHTML=`<option value="">All Area</option>`+areas.map(a=>`<option value="${esc(a)}">${esc(a)}</option>`).join("");
+  area.value=areas.includes(previous)?previous:"";
+ };
+
+ const renderTable=()=>{
+  const config=configs[view.value]||configs.primary;
+  const arrangeBy=arrange.value||"product";
+  const selectedArea=area.value;
+  const source=rows(config.sheet).filter(r=>!selectedArea||String(r.Area||"").trim()===selectedArea);
+  const datedRows=source.map((r,index)=>({r,index,d:dateOnly(r[config.date])})).filter(x=>x.d);
+
+  if(!datedRows.length){
+   period.textContent=config.label+" · No dated data";
+   totalCard.innerHTML=`<span class="month-total-card-label">Total ${esc(config.label)} Value</span><strong>0</strong><small>${esc(selectedArea||"All Area")} · ${arrangeBy==="so"?"SO Wise":"Product Wise"}</small>`;
+   table.innerHTML=`<tbody><tr><td class="empty">No ${esc(config.label)} data found.</td></tr></tbody>`;
+   return;
+  }
+
+  const latest=new Date(Math.max(...datedRows.map(x=>x.d.getTime())));
+  const year=latest.getFullYear(),month=latest.getMonth();
+  const monthRows=datedRows.filter(x=>x.d.getFullYear()===year&&x.d.getMonth()===month);
+  const lastDay=latest.getDate();
+  const days=Array.from({length:lastDay},(_,i)=>new Date(year,month,i+1));
+  const dayKeys=days.map(iso);
+
+  const entityOf=r=>arrangeBy==="so"?String(r["SO Name"]||"").trim():String(r.SKU||"").trim();
+  const entities=[],seen=new Set();
+  source.forEach(r=>{
+   const name=entityOf(r),key=name.toLocaleLowerCase();
+   if(name&&!seen.has(key)){seen.add(key);entities.push(name)}
+  });
+
+  const matrix=new Map(),dayTotals=new Map(dayKeys.map(k=>[k,0]));
+  let grandTotal=0;
+  monthRows.forEach(({r,d})=>{
+   const entity=entityOf(r);
+   if(!entity)return;
+   const entityKey=entity.toLocaleLowerCase(),dayKey=iso(d),value=positiveNum(r[config.value]);
+   if(!matrix.has(entityKey))matrix.set(entityKey,new Map());
+   const byDay=matrix.get(entityKey);
+   byDay.set(dayKey,(byDay.get(dayKey)||0)+value);
+   dayTotals.set(dayKey,(dayTotals.get(dayKey)||0)+value);
+   grandTotal+=value;
+  });
+
+  const activeEntities=entities.filter(name=>matrix.has(name.toLocaleLowerCase()));
+  const showValue=v=>v>0?money(v):"-";
+  const entityHeader=arrangeBy==="so"?"SO":"Product";
+  const dayHead=d=>{
+   const dateLabel=`${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
+   const weekday=d.toLocaleDateString("en-US",{weekday:"short"});
+   return `<th class="month-day-head"><span class="month-date">${dateLabel}</span><span class="month-weekday">${weekday}</span></th>`;
+  };
+
+  const body=activeEntities.map((name,i)=>{
+   const byDay=matrix.get(name.toLocaleLowerCase())||new Map();
+   const rowTotal=dayKeys.reduce((sum,key)=>sum+(byDay.get(key)||0),0);
+   return `<tr>
+    <td class="month-sl">${i+1}</td>
+    <td class="month-product">${esc(name)}</td>
+    ${dayKeys.map(key=>`<td class="num">${showValue(byDay.get(key)||0)}</td>`).join("")}
+    <td class="num month-row-total">${money(rowTotal)}</td>
+   </tr>`;
+  }).join("");
+
+  const footer=`<tfoot><tr>
+   <th class="month-sl"> </th>
+   <th class="month-product">Total</th>
+   ${dayKeys.map(key=>`<th class="num">${money(dayTotals.get(key)||0)}</th>`).join("")}
+   <th class="num month-grand-total">${money(grandTotal)}</th>
+  </tr></tfoot>`;
+
+  table.innerHTML=`<thead><tr>
+   <th class="month-sl">SL</th>
+   <th class="month-product">${entityHeader}</th>
+   ${days.map(dayHead).join("")}
+   <th class="month-total-head"><span>Total Value</span><span>${esc(config.label)}</span></th>
+  </tr></thead>
+  <tbody>${body||`<tr><td colspan="${days.length+3}" class="empty">No ${esc(entityHeader)} data found for this month.</td></tr>`}</tbody>
+  ${footer}`;
+
+  totalCard.innerHTML=`<span class="month-total-card-label">Total ${esc(config.label)} Value</span><strong>${money(grandTotal)}</strong><small>${esc(selectedArea||"All Area")} · ${arrangeBy==="so"?"SO Wise":"Product Wise"}</small>`;
+  period.innerHTML=`<strong>${latest.toLocaleDateString("en-US",{month:"long",year:"numeric"})}</strong><span>${esc(config.label)} · Through ${latest.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</span>`;
+ };
+
+ view.addEventListener("change",()=>{updateAreas();renderTable()});
+ arrange.addEventListener("change",renderTable);
+ area.addEventListener("change",renderTable);
+ updateAreas();
+ renderTable();
+}
+
 function renderMyDay(){
  ensureDerivedFields();
  const allSpecs=[
@@ -3227,4 +3375,159 @@ html:not([data-theme="light"]) .sales-trend{--trend-label-halo:#140021}
  html[data-theme="light"] .myday-mobile-section table{background:#fff!important}
 }
 @media(max-width:380px){.home-title-row{gap:7px}.home-title-row h1{font-size:21px!important}.theme-toggle{width:78px;height:34px;padding:0 6px}.theme-toggle-icon{font-size:14px}.theme-toggle-knob{width:24px;height:24px;top:4px;transform:translateX(42px)}html[data-theme="light"] .theme-toggle-knob{transform:translateX(0)}}
+</style>
+
+<style>
+
+.nav a[data-page="month-status"]::before{
+ -webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 2h2v2h8V2h2v2h3v18H3V4h3V2Zm13 8H5v10h14V10ZM5 6v2h14V6H5Zm2 6h3v2H7v-2Zm5 0h5v2h-5v-2Zm-5 4h3v2H7v-2Zm5 0h5v2h-5v-2Z'/%3E%3C/svg%3E")!important;
+ mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 2h2v2h8V2h2v2h3v18H3V4h3V2Zm13 8H5v10h14V10ZM5 6v2h14V6H5Zm2 6h3v2H7v-2Zm5 0h5v2h-5v-2Zm-5 4h3v2H7v-2Zm5 0h5v2h-5v-2Z'/%3E%3C/svg%3E")!important;
+}
+
+/* ===== Month Status ===== */
+.month-status-controls{
+ display:flex;align-items:end;gap:18px;margin-bottom:16px;
+}
+.month-status-view-field{width:min(260px,100%)}
+.month-status-period{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px;color:#aa98bc;font-size:12px}
+.month-status-period strong{color:#fff;font-size:14px}
+.month-status-card{padding:0!important;overflow:hidden}
+.month-status-wrap{
+ width:100%;max-width:100%;overflow:auto;border:0!important;border-radius:inherit!important;
+ scrollbar-width:thin;
+}
+.month-status-table{
+ width:max-content;min-width:100%;border-collapse:separate!important;border-spacing:0!important;
+ font-size:11px!important;line-height:1.2;table-layout:fixed;background:#fff;
+}
+.month-status-table th,.month-status-table td{
+ height:31px;padding:5px 8px!important;border-right:1px solid #d8dde4!important;border-bottom:1px solid #d8dde4!important;
+ white-space:nowrap;vertical-align:middle;
+}
+.month-status-table thead th{
+ position:sticky;top:0;z-index:5;height:58px;background:#07599c!important;color:#fff!important;
+ text-align:center!important;font-weight:800!important;border-color:#d0d8e1!important;
+}
+.month-status-table thead .month-day-head{
+ min-width:100px;width:100px;padding:4px 7px!important;
+}
+.month-date{display:block;color:#fff900;font-size:11px;font-weight:900}
+.month-weekday{display:block;color:#fff900;font-size:10px;font-weight:800;margin-top:2px}
+.month-value-label{display:block;color:#fff;font-size:10px;font-weight:700;margin-top:6px}
+.month-total-head{min-width:110px;width:110px;background:#064b83!important}
+.month-total-head span{display:block}.month-total-head span+span{margin-top:5px;font-size:10px;color:#fff900}
+.month-status-table tbody td{background:#fff!important;color:#202a36!important}
+.month-status-table tbody tr:nth-child(even) td{background:#fbfcfd!important}
+.month-status-table tbody tr:hover td{background:#f1f7fc!important}
+.month-status-table td.num{text-align:right!important;font-variant-numeric:tabular-nums}
+.month-status-table .month-sl{
+ position:sticky;left:0;z-index:3;width:42px;min-width:42px;max-width:42px;text-align:center!important;
+}
+.month-status-table .month-product{
+ position:sticky;left:42px;z-index:3;width:160px;min-width:160px;max-width:160px;text-align:left!important;
+ box-shadow:2px 0 0 rgba(0,0,0,.06);
+}
+.month-status-table thead .month-sl,.month-status-table thead .month-product{z-index:7;background:#07599c!important;color:#fff900!important}
+.month-status-table tbody .month-sl,.month-status-table tbody .month-product{background:#fff!important}
+.month-status-table tbody tr:nth-child(even) .month-sl,.month-status-table tbody tr:nth-child(even) .month-product{background:#fbfcfd!important}
+.month-status-table tbody tr:hover .month-sl,.month-status-table tbody tr:hover .month-product{background:#f1f7fc!important}
+.month-row-total{font-weight:800!important;background:#f0f6fb!important;color:#07599c!important}
+.month-status-table tfoot th{
+ position:sticky;bottom:0;z-index:5;height:35px;background:#f4f6f8!important;color:#111827!important;
+ border-top:2px solid #07599c!important;font-weight:900!important;text-align:right!important;
+}
+.month-status-table tfoot .month-sl{z-index:7;background:#f4f6f8!important}
+.month-status-table tfoot .month-product{z-index:7;background:#f4f6f8!important;text-align:center!important}
+.month-grand-total{background:#dfeefa!important;color:#064b83!important}
+html[data-theme="light"] .month-status-period{color:#69788f!important}
+html[data-theme="light"] .month-status-period strong{color:#18263e!important}
+html[data-theme="light"] .month-status-card{background:#fff!important}
+html[data-theme="light"] .month-status-table{background:#fff!important}
+html[data-theme="light"] .month-status-table thead th{background:#07599c!important;color:#fff!important}
+html[data-theme="light"] .month-status-table thead .month-sl,
+html[data-theme="light"] .month-status-table thead .month-product{background:#07599c!important;color:#fff900!important}
+html[data-theme="light"] .month-status-table tbody td{background:#fff!important;color:#202a36!important}
+html[data-theme="light"] .month-status-table tbody tr:nth-child(even) td{background:#fbfcfd!important}
+html[data-theme="light"] .month-status-table tbody .month-sl,
+html[data-theme="light"] .month-status-table tbody .month-product{background:#fff!important}
+html[data-theme="light"] .month-status-table tbody tr:nth-child(even) .month-sl,
+html[data-theme="light"] .month-status-table tbody tr:nth-child(even) .month-product{background:#fbfcfd!important}
+html[data-theme="light"] .month-status-table tfoot th{background:#f4f6f8!important;color:#111827!important}
+html[data-theme="light"] .month-grand-total{background:#dfeefa!important;color:#064b83!important}
+
+/* Dark theme keeps the same spreadsheet structure with dashboard-friendly cells. */
+html:not([data-theme="light"]) .month-status-table{background:#170024!important}
+html:not([data-theme="light"]) .month-status-table tbody td{background:#21002f!important;color:#f4ecfa!important;border-color:#4a2759!important}
+html:not([data-theme="light"]) .month-status-table tbody tr:nth-child(even) td{background:#260036!important}
+html:not([data-theme="light"]) .month-status-table tbody tr:hover td{background:#310044!important}
+html:not([data-theme="light"]) .month-status-table tbody .month-sl,
+html:not([data-theme="light"]) .month-status-table tbody .month-product{background:#21002f!important}
+html:not([data-theme="light"]) .month-status-table tbody tr:nth-child(even) .month-sl,
+html:not([data-theme="light"]) .month-status-table tbody tr:nth-child(even) .month-product{background:#260036!important}
+html:not([data-theme="light"]) .month-status-table tbody tr:hover .month-sl,
+html:not([data-theme="light"]) .month-status-table tbody tr:hover .month-product{background:#310044!important}
+html:not([data-theme="light"]) .month-row-total{background:#1a173d!important;color:#43e5f0!important}
+html:not([data-theme="light"]) .month-status-table tfoot th{background:#100019!important;color:#fff!important;border-color:#3f2360!important;border-top-color:#28dce5!important}
+html:not([data-theme="light"]) .month-grand-total{background:#17223e!important;color:#4ee9f1!important}
+
+@media(max-width:700px){
+ .month-status-controls{align-items:stretch;gap:10px}
+ .month-status-view-field{width:170px;flex:0 0 170px}
+ .month-status-period{margin-left:0;flex:1;align-items:flex-end;justify-content:center;text-align:right}
+ .month-status-table{font-size:10px!important}
+ .month-status-table th,.month-status-table td{padding:5px 6px!important}
+ .month-status-table .month-sl{width:36px;min-width:36px;max-width:36px}
+ .month-status-table .month-product{left:36px;width:130px;min-width:130px;max-width:130px}
+ .month-status-table thead .month-day-head{min-width:92px;width:92px}
+}
+@media(max-width:430px){
+ .month-status-controls{display:grid;grid-template-columns:145px 1fr}
+ .month-status-view-field{width:145px}
+ .month-status-period{font-size:10px}
+ .month-status-period strong{font-size:12px}
+ .month-status-table .month-product{width:118px;min-width:118px;max-width:118px}
+}
+
+</style>
+
+
+<style id="monthStatusV2Styles">
+/* Month Status V2 */
+.month-status-controls-v2{display:grid!important;grid-template-columns:minmax(540px,1fr) minmax(270px,320px) minmax(210px,280px)!important;align-items:center!important;gap:24px!important;padding:22px 26px!important}
+.month-status-filter-grid{display:grid;grid-template-columns:repeat(3,minmax(150px,1fr));gap:14px;align-items:end}
+.month-status-view-field,.month-status-arrange-field,.month-status-area-field{width:auto!important}
+.month-status-total-card{min-height:96px;box-sizing:border-box;border:1px solid #5a2674;border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(135deg,#260038,#170027);box-shadow:inset 0 0 20px rgba(47,229,255,.025)}
+.month-total-card-label{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#bca8ce}
+.month-status-total-card strong{display:block;margin:5px 0 4px;color:#42e7ef;font-size:25px;line-height:1;font-weight:900;font-variant-numeric:tabular-nums}
+.month-status-total-card small{font-size:10px;color:#9c88b0}
+.month-status-period{margin-left:0!important;min-width:0}
+.month-status-wrap{height:560px!important;max-height:560px!important;overflow:auto!important}
+.month-status-table thead th{height:48px!important}
+.month-status-table th,.month-status-table td{height:30px!important;padding:4px 8px!important}
+.month-status-table tfoot th{height:34px!important}
+.month-status-table thead .month-day-head{padding:5px 7px!important}
+.month-date{font-size:11px!important}.month-weekday{font-size:10px!important;margin-top:4px!important}
+.month-value-label{display:none!important}
+html[data-theme="light"] .month-status-total-card{background:linear-gradient(135deg,#f8fbfe,#edf5fa)!important;border-color:#d6e4ed!important;box-shadow:0 7px 20px rgba(35,55,80,.06)!important}
+html[data-theme="light"] .month-total-card-label{color:#617890!important}
+html[data-theme="light"] .month-status-total-card strong{color:#07599c!important}
+html[data-theme="light"] .month-status-total-card small{color:#7b8999!important}
+@media(max-width:1100px){
+ .month-status-controls-v2{grid-template-columns:1fr minmax(240px,300px)!important}
+ .month-status-period{grid-column:1/-1;align-items:flex-end!important}
+}
+@media(max-width:760px){
+ .month-status-controls-v2{grid-template-columns:1fr!important;gap:14px!important;padding:16px!important}
+ .month-status-filter-grid{grid-template-columns:1fr 1fr 1fr;gap:8px}
+ .month-status-total-card{min-height:82px;width:100%}
+ .month-status-total-card strong{font-size:22px}
+ .month-status-period{grid-column:auto;align-items:flex-end!important}
+ .month-status-wrap{height:552px!important;max-height:552px!important}
+}
+@media(max-width:520px){
+ .month-status-filter-grid{grid-template-columns:1fr 1fr}
+ .month-status-area-field{grid-column:1/-1}
+ .month-status-controls-v2{padding:13px!important}
+ .month-status-wrap{height:548px!important;max-height:548px!important}
+}
 </style>
