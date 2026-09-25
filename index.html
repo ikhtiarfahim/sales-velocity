@@ -1534,6 +1534,24 @@ function render(){
   ({home:renderHome,"my-day":renderMyDay,primary:renderPrimary,secondary:renderSecondary,order:renderOrder,stock:renderStock,asm:renderASM,zsm:renderZSM,"sku-sales":renderSKUSales,sku:renderSKU,update:renderUpdate}[page]||renderHome)();
   syncHomeOrderTicker(page);
 }
+
+const SALES_THEME_KEY="salesVelocityTheme";
+function currentDashboardTheme(){
+ try{return localStorage.getItem(SALES_THEME_KEY)==="light"?"light":"dark"}catch(e){return "dark"}
+}
+function applyDashboardTheme(theme){
+ const next=theme==="light"?"light":"dark";
+ document.documentElement.setAttribute("data-theme",next);
+ try{localStorage.setItem(SALES_THEME_KEY,next)}catch(e){}
+ const btn=document.getElementById("themeToggle");
+ if(btn){
+  btn.setAttribute("aria-pressed",next==="light"?"true":"false");
+  btn.setAttribute("title",next==="light"?"Switch to Dark Theme":"Switch to Light Theme");
+ }
+}
+function toggleDashboardTheme(){applyDashboardTheme(currentDashboardTheme()==="dark"?"light":"dark")}
+applyDashboardTheme(currentDashboardTheme());
+
 function shell(title,sub,body){document.getElementById("app").innerHTML=`${title?`<div class="title"><h1>${title}</h1>${sub?`<p>${sub}</p>`:""}</div>`:""}${body}`}
 function renderNoData(){shell("Sales Velocity","Upload today's Excel file to start.",`<div class="card empty">No data loaded. Open <b>Update Data</b> and choose the Excel file. The <b>Primary</b>, <b>Delivery</b>, <b>Order</b> <b>Stock</b> and <b>TGT</b> sheets will be read; <b>XYZ</b> is ignored.</div>`)}
 function currentMonthStats(sheet,dateKey,valueKey){
@@ -1568,8 +1586,27 @@ function homeSalesTrend(){
  if(n>=1000) return (value/1000).toFixed(1)+" K";
  return money(value);
 };
- const series=[{key:"primary",label:"Primary",color:"#ffd400",dy:-12},{key:"delivery",label:"Delivery",color:"#e12535",dy:17}];
- const lines=series.map(s=>`<polyline points="${data.map((d,i)=>`${x(i)},${y(d[s.key])}`).join(" ")}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round"/>${data.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d[s.key])}" r="4" fill="${s.color}"><title>${esc(d.date)} ${s.label}: ${money(d[s.key])}</title></circle><text x="${x(i)}" y="${Math.max(14,Math.min(212,y(d[s.key])+s.dy))}" fill="${s.color}" text-anchor="middle" font-size="10" font-weight="700">${short(d[s.key])}</text>`).join("")}`).join("");
+ const series=[{key:"primary",label:"Primary",color:"#ffd400"},{key:"delivery",label:"Delivery",color:"#e12535"}];
+ const clampLabelY=v=>Math.max(15,Math.min(211,v));
+ const labelY={primary:[],delivery:[]};
+ data.forEach((d,i)=>{
+   const py=y(d.primary),dy=y(d.delivery);
+   let pLabel=clampLabelY(py-14),dLabel=clampLabelY(dy+19);
+   // Keep Primary and Delivery value labels separated even when the lines cross or run close together.
+   if(Math.abs(pLabel-dLabel)<18){
+     if(py<=dy){pLabel=clampLabelY(py-20);dLabel=clampLabelY(dy+24)}
+     else{pLabel=clampLabelY(py+24);dLabel=clampLabelY(dy-20)}
+   }
+   // Stagger labels on neighbouring dates when they sit on almost the same horizontal level.
+   if(i>0&&Math.abs(pLabel-labelY.primary[i-1])<9)pLabel=clampLabelY(pLabel+(i%2?10:-10));
+   if(i>0&&Math.abs(dLabel-labelY.delivery[i-1])<9)dLabel=clampLabelY(dLabel+(i%2?-10:10));
+   if(Math.abs(pLabel-dLabel)<16){
+     if(pLabel<=dLabel){pLabel=clampLabelY(pLabel-9);dLabel=clampLabelY(dLabel+9)}
+     else{pLabel=clampLabelY(pLabel+9);dLabel=clampLabelY(dLabel-9)}
+   }
+   labelY.primary[i]=pLabel;labelY.delivery[i]=dLabel;
+ });
+ const lines=series.map(s=>`<polyline points="${data.map((d,i)=>`${x(i)},${y(d[s.key])}`).join(" ")}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round"/>${data.map((d,i)=>`<circle cx="${x(i)}" cy="${y(d[s.key])}" r="4" fill="${s.color}"><title>${esc(d.date)} ${s.label}: ${money(d[s.key])}</title></circle><text class="trend-value-label" x="${x(i)}" y="${labelY[s.key][i]}" fill="${s.color}" text-anchor="middle" font-size="10" font-weight="800" paint-order="stroke" stroke="var(--trend-label-halo,#140021)" stroke-width="3" stroke-linejoin="round">${short(d[s.key])}</text>`).join("")}`).join("");
  const ticks=[0,.5,1].map(f=>`<line x1="${left}" y1="${y(max*f)}" x2="${right}" y2="${y(max*f)}" stroke="#e5edf2"/><text x="${left-6}" y="${y(max*f)+4}" text-anchor="end" fill="#617895" font-size="10">${short(max*f)}</text>`).join("");
  const labels=data.map((d,i)=>`<text x="${x(i)}" y="232" text-anchor="middle" fill="#617895" font-size="10">${d.date.slice(8)}</text>`).join("");
  return `<div class="card sales-trend"><div class="smalltitle">Primary &amp; Delivery by Date — ${esc(new Date(Number(latest.slice(0,4)),Number(latest.slice(5,7))-1,1).toLocaleDateString("en-US",{month:"long",year:"numeric"}))}</div><div class="trend-wrap"><svg width="${width}" viewBox="0 0 ${width} 245" role="img" aria-label="Daily Primary and Delivery values for ${esc(latest.slice(0,7))}">${ticks}${lines}${labels}</svg></div><div class="trend-legend"><span><i style="background:#ffd400"></i>Primary</span><span><i style="background:#e12535"></i>Delivery</span></div><details style="margin-top:12px"><summary style="cursor:pointer;color:#58728e;font-size:13px">See exact daily values</summary><div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>Date</th><th style="text-align:right">Primary</th><th style="text-align:right">Delivery</th></tr></thead><tbody>${data.map(d=>`<tr><td>${esc(d.date)}</td><td class="num">${money(d.primary)}</td><td class="num">${money(d.delivery)}</td></tr>`).join("")}</tbody></table></div></details></div>`;
@@ -1703,7 +1740,7 @@ function renderHome(){
  const topZSM=[...rankedZSM];
  for(const requiredZone of ["NB","EC&SC"]){if(!topZSM.some(x=>x.z.toUpperCase()===requiredZone))topZSM.push(rankedZSM.find(x=>x.z.toUpperCase()===requiredZone)||{z:requiredZone,primary:0,delivery:0,order:0,target:targetFor("Zone","",requiredZone)})}
  topZSM.sort((a,b)=>compareZones(a.z,b.z));
- shell("","",`<div class="home-title-match"><div class="home-powered-match">Powered By Ikhtiar Fahim</div><h1>Your Sales Velocity</h1></div>
+ shell("","",`<div class="home-title-match"><div class="home-powered-match">Powered By Ikhtiar Fahim</div><div class="home-title-row"><h1>Your Sales Velocity</h1><button class="theme-toggle" id="themeToggle" type="button" onclick="toggleDashboardTheme()" aria-label="Switch between light and dark theme" title="Light / Dark Theme"><span class="theme-toggle-icon theme-sun">☀</span><span class="theme-toggle-knob"></span><span class="theme-toggle-icon theme-moon">☾</span></button></div></div>
  <span id="home-refresh-status" class="sales-refresh-status" style="color:var(--muted);font-size:12px">Auto update checks every minute</span>
  <div class="home-metrics">
  ${metric("Total Monthly Target",totalMonthlyTarget,"","kpi-target")}${metric("Total Primary Value",primaryWithoutNegativeDB(rows("Primary")),"","kpi-primary")}${metric("Total Delivery Value",d.total,"","kpi-delivery")}${metric("Total Order Value",o.total,"","kpi-order")}
@@ -1724,6 +1761,7 @@ function renderHome(){
  <div class="card table-card" style="margin-top:18px"><div class="smalltitle">Area Performance — Target, Primary, Delivery &amp; Order Value</div><div class="table-wrap"><table class="zone-summary"><thead><tr><th>Area</th><th>Area TGT</th><th>Primary</th><th>Achv.</th><th>Delivery</th><th>Order</th><th>GAP</th></tr></thead><tbody>
  ${areaPerformance.map(x=>`<tr><td>${esc(x.area)}</td><td class="num">${targetCell(x.target)}</td><td class="num">${money(x.primary)}</td><td class="num">${achievement(x.primary,x.target)}</td><td class="num">${money(x.delivery)}</td><td class="num">${money(x.order)}</td><td class="num">${money(x.delivery-x.order)}</td></tr>`).join("")}</tbody></table></div></div>`);
 
+ applyDashboardTheme(currentDashboardTheme());
  startAISalesAdvisor();
 }
 function filterPanel(type){
@@ -3093,4 +3131,100 @@ body.dashboard-authenticated .home-order-ticker{display:flex}
 #secondary-date-summary .metric:nth-child(3) .label,#secondary-date-summary .metric:nth-child(3) .value,#secondary-date-summary .metric:nth-child(3) .sub,
 #order-date-summary .metric:nth-child(3) .label,#order-date-summary .metric:nth-child(3) .value,#order-date-summary .metric:nth-child(3) .sub{color:#fff!important}
 @media(max-width:900px){#primary-date-summary,#secondary-date-summary,#order-date-summary{grid-template-columns:1fr!important}}
+</style>
+
+
+<style id="salesVelocityThemeStyles">
+/* ===== Light / Dark theme toggle ===== */
+.home-title-row{display:flex;align-items:center;gap:16px;min-width:0}
+.home-title-row h1{min-width:0}
+.theme-toggle{
+ position:relative;flex:0 0 auto;width:94px;height:38px;margin:0;padding:0 8px;
+ display:flex;align-items:center;justify-content:space-between;border:1px solid #71318a;
+ border-radius:20px;background:#210032;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03);
+ transition:background .22s ease,border-color .22s ease,box-shadow .22s ease;
+}
+.theme-toggle-icon{position:relative;z-index:2;width:20px;text-align:center;font-size:16px;line-height:1;user-select:none;pointer-events:none}
+.theme-sun{color:#ffd35a}.theme-moon{color:#d7c6ff}
+.theme-toggle-knob{position:absolute;z-index:1;left:5px;top:4px;width:28px;height:28px;border-radius:50%;background:#f7f3fb;box-shadow:0 2px 8px rgba(0,0,0,.28);transform:translateX(52px);transition:transform .22s ease,background .22s ease}
+html[data-theme="light"] .theme-toggle{background:#edf4fb;border-color:#b8c8d9;box-shadow:inset 0 0 0 1px rgba(255,255,255,.7)}
+html[data-theme="light"] .theme-toggle-knob{transform:translateX(0);background:#fff}
+html[data-theme="light"] .theme-sun{color:#e39a00}html[data-theme="light"] .theme-moon{color:#66758c}
+
+/* ===== Light theme ===== */
+html[data-theme="light"],html[data-theme="light"] body{--bg:#f3f6fa!important;--ink:#18263e!important;--muted:#69788f!important;--line:#e0e7ef!important;--card:#fff!important;--input:#f7f9fc!important;--nav:#fff!important;--brand:#cf003d!important;--focus:#487bce!important;background:#f3f6fa!important;color:#18263e!important;color-scheme:light}
+html[data-theme="light"] body{background:linear-gradient(135deg,#f7f9fc 0%,#edf3f8 100%) fixed!important}
+html[data-theme="light"] .top{background:rgba(255,255,255,.98)!important;border-color:#dfe6ee!important;box-shadow:0 8px 24px rgba(34,55,80,.07)!important}
+html[data-theme="light"] .nav-brand{border-color:#e5eaf0!important}
+html[data-theme="light"] .nav-brand strong{color:#18263e!important}
+html[data-theme="light"] .nav-brand small,html[data-theme="light"] .updated{color:#8792a4!important}
+html[data-theme="light"] .nav a{background:#fff!important;border-color:transparent!important;color:#657187!important}
+html[data-theme="light"] .nav a:hover{background:#f3f6fa!important;color:#223955!important;border-color:#e6ebf1!important}
+html[data-theme="light"] .nav a.active{background:#fff0f4!important;color:#bf0038!important;border-color:#ffe0e9!important;box-shadow:inset 3px 0 0 #cf003d!important}
+html[data-theme="light"] .title h1,html[data-theme="light"] .smalltitle,html[data-theme="light"] h1,html[data-theme="light"] h2,html[data-theme="light"] h3{color:#18263e!important}
+html[data-theme="light"] .home-title-match h1{color:#cf003d!important}
+html[data-theme="light"] .title p,html[data-theme="light"] .home-meta,html[data-theme="light"] .notice,html[data-theme="light"] .help,html[data-theme="light"] .security,html[data-theme="light"] .zone-ranking-sub{color:#69788f!important}
+html[data-theme="light"] .home-title-match{border-bottom-color:#e4e9f0!important}
+html[data-theme="light"] .home-powered-match{color:#8994a7!important}
+html[data-theme="light"] .card,html[data-theme="light"] .filters,html[data-theme="light"] .zone-ranking,html[data-theme="light"] .home-achievement-charts>.zone-ranking,html[data-theme="light"] .drill-panel,html[data-theme="light"] .inline-expand-content,html[data-theme="light"] .myday-table-card{background:#fff!important;border-color:#e3e9f0!important;color:#18263e!important;box-shadow:0 8px 24px rgba(35,55,80,.06)!important}
+html[data-theme="light"] .field label,html[data-theme="light"] .publish-grid label{color:#607995!important}
+html[data-theme="light"] .field input,html[data-theme="light"] .field select,html[data-theme="light"] .publish-grid input,html[data-theme="light"] .myday-controls input,html[data-theme="light"] .myday-controls select{background:#f7f9fc!important;color:#18263e!important;border-color:#d6e0ea!important;color-scheme:light}
+html[data-theme="light"] .field input:focus,html[data-theme="light"] .field select:focus,html[data-theme="light"] .publish-grid input:focus,html[data-theme="light"] .myday-controls input:focus,html[data-theme="light"] .myday-controls select:focus{background:#fff!important;border-color:#487bce!important;box-shadow:0 0 0 3px rgba(72,123,206,.12)!important}
+html[data-theme="light"] select option{background:#fff!important;color:#18263e!important}
+html[data-theme="light"] .btn{background:#fff!important;color:#607995!important;border-color:#d3e2ec!important}
+html[data-theme="light"] .btn:hover{background:#f4f7fa!important;color:#18263e!important}
+html[data-theme="light"] .btn.dark{background:#071b38!important;color:#fff!important;border-color:#071b38!important;box-shadow:none!important}
+html[data-theme="light"] .table-wrap,html[data-theme="light"] .myday-table-wrap,html[data-theme="light"] .myday-mobile-section .table-wrap,html[data-theme="light"] .myday-detail-inner table,html[data-theme="light"] .myday-mobile-detail-inner table{background:#fff!important;border-color:#e1e7ee!important;scrollbar-color:#b9c7d6 #f1f4f7!important}
+html[data-theme="light"] table{background:#fff!important;color:#26364d!important}
+html[data-theme="light"] th{background:#f6f8fb!important;color:#607995!important;border-color:#e3e9ef!important}
+html[data-theme="light"] td,html[data-theme="light"] td.num{color:#26364d!important;border-color:#e8edf2!important;background:transparent!important}
+html[data-theme="light"] tbody tr:nth-child(odd){background:#fff!important}html[data-theme="light"] tbody tr:nth-child(even){background:#fafbfd!important}html[data-theme="light"] tbody tr:hover{background:#f1f6fb!important}
+html[data-theme="light"] .drill-link,html[data-theme="light"] .myday-sku-toggle,html[data-theme="light"] .myday-mobile-toggle{color:#0759a6!important;text-decoration-color:rgba(7,89,166,.45)!important}
+html[data-theme="light"] .tag{background:#edf7fb!important;color:#57718e!important;border-color:#d9e9f1!important}
+html[data-theme="light"] .empty{color:#607895!important}
+html[data-theme="light"] .achievement-row{background:#fff!important;border-color:#e3e9ef!important}html[data-theme="light"] .achievement-row.active{background:#f2f7fb!important;border-color:#bfd0df!important}
+html[data-theme="light"] .achievement-name,html[data-theme="light"] .achievement-percent{color:#26364d!important}
+html[data-theme="light"] .achievement-track{background:#e7edf3!important}
+html[data-theme="light"] .achievement-count{background:#edf5fa!important;color:#315d7d!important;border-color:#d7e5ee!important}
+html[data-theme="light"] .status,html[data-theme="light"] .notice{background:#eef8fc!important;color:#36536f!important;border-color:#d7e8ef!important}
+html[data-theme="light"] .login-overlay{background:linear-gradient(135deg,#ddecf6,#f7fafc)!important}
+html[data-theme="light"] .login-card{background:#fff!important;border-color:#e0e7ef!important;box-shadow:0 25px 70px rgba(7,27,56,.16)!important}
+html[data-theme="light"] .login-card h1{color:#18263e!important}html[data-theme="light"] .login-card>p{color:#607895!important}
+html[data-theme="light"] .home-order-ticker{background:#fff!important;border-color:#dfe6ee!important;box-shadow:0 5px 18px rgba(35,55,80,.08)!important}
+html[data-theme="light"] .home-order-ticker .ticker-live{background:#cf003d!important;color:#fff!important}
+html[data-theme="light"] .home-order-ticker .ticker-item{color:#26364d!important}html[data-theme="light"] .home-order-ticker .ticker-value{color:#087a55!important}
+html[data-theme="light"] .sales-trend,html[data-theme="light"] .achievement-meter{background:#fff!important;border-color:#e3e9ef!important;--trend-label-halo:#fff}
+html[data-theme="light"] .sales-trend svg text,html[data-theme="light"] .zone-ranking svg text{filter:none!important}
+html[data-theme="light"] .sales-trend svg line,html[data-theme="light"] .zone-ranking svg line{stroke:#dfe7ee!important}
+html[data-theme="light"] .inline-expand-row>td,html[data-theme="light"] .myday-detail-row>td,html[data-theme="light"] .myday-mobile-detail>td{background:#f7f9fc!important;border-color:#e1e7ee!important}
+html[data-theme="light"] .inline-expand-content{background:#fff!important}
+html[data-theme="light"] .ai-sales-advisor{background:linear-gradient(135deg,#f5fbff,#eef6fb)!important;border-color:#c7e2ec!important;box-shadow:inset 0 0 18px rgba(35,145,175,.035)!important}
+html[data-theme="light"] .ai-advisor-head{color:#087f96!important}html[data-theme="light"] .ai-advisor-message{color:#26364d!important}html[data-theme="light"] .ai-advisor-cursor{color:#087f96!important}
+html[data-theme="light"] .myday-table thead th,html[data-theme="light"] .myday-mobile-section thead th{background:#f2f6fa!important;color:#315d7d!important;border-color:#d9e2eb!important}
+html[data-theme="light"] .myday-table thead tr.myday-superhead th{background:#eaf0f6!important;color:#26364d!important;border-color:#d2dce6!important}
+html[data-theme="light"] .myday-table tbody tr:nth-child(odd) td:not(.myday-divider),html[data-theme="light"] .myday-table tbody tr:nth-child(even) td:not(.myday-divider){background:#fff!important;color:#26364d!important}
+html[data-theme="light"] .myday-table tbody tr:nth-child(even) td:not(.myday-divider){background:#fafbfd!important}
+html[data-theme="light"] .myday-table .myday-sku,html[data-theme="light"] .myday-detail-inner .myday-sku-name,html[data-theme="light"] .myday-mobile-detail-inner .myday-sku-name{color:#10233d!important}
+html[data-theme="light"] .myday-table tfoot th,html[data-theme="light"] .myday-mobile-section tfoot th{background:#182f50!important;color:#fff!important}
+html[data-theme="light"] .myday-detail-inner th,html[data-theme="light"] .myday-mobile-detail-inner th{background:#f0f5f9!important;color:#315d7d!important}
+html[data-theme="light"] .myday-detail-inner td,html[data-theme="light"] .myday-mobile-detail-inner td{background:#fff!important}
+html[data-theme="light"] .myday-mobile-heading{color:#26364d!important}
+html[data-theme="light"] .trend-legend{color:#607895!important}
+html:not([data-theme="light"]) .sales-trend{--trend-label-halo:#140021}
+
+@media(max-width:900px){
+ .home-title-row{gap:10px;justify-content:space-between}
+ .home-title-row h1{font-size:clamp(22px,7vw,30px)!important;white-space:nowrap}
+ .theme-toggle{width:88px;height:36px}
+ .theme-toggle-knob{width:26px;height:26px;top:4px;transform:translateX(48px)}
+ html[data-theme="light"] .theme-toggle-knob{transform:translateX(0)}
+ html[data-theme="light"] .top{background:rgba(255,255,255,.98)!important;border-bottom-color:#dfe6ee!important}
+ html[data-theme="light"] .nav{background:transparent!important}
+ html[data-theme="light"] .nav a{background:#fff!important;border-color:#e4eaf0!important;color:#657187!important}
+ html[data-theme="light"] .nav a.active{background:#fff0f4!important;color:#bf0038!important;border-color:#ffdbe5!important}
+ html[data-theme="light"] main{background:transparent!important}
+ html[data-theme="light"] .card,html[data-theme="light"] .filters{background:#fff!important}
+ html[data-theme="light"] .myday-mobile-section table{background:#fff!important}
+}
+@media(max-width:380px){.home-title-row{gap:7px}.home-title-row h1{font-size:21px!important}.theme-toggle{width:78px;height:34px;padding:0 6px}.theme-toggle-icon{font-size:14px}.theme-toggle-knob{width:24px;height:24px;top:4px;transform:translateX(42px)}html[data-theme="light"] .theme-toggle-knob{transform:translateX(0)}}
 </style>
