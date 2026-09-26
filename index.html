@@ -1949,7 +1949,6 @@ function renderMonthStatus(){
     <strong>0</strong>
     <small>All Area · Product Wise</small>
    </div>
-   <div class="month-status-period" id="month-status-period"></div>
   </div>
   <div class="card month-status-card">
    <div class="table-wrap month-status-wrap">
@@ -1961,7 +1960,6 @@ function renderMonthStatus(){
  const arrange=document.getElementById("month-status-arrange");
  const area=document.getElementById("month-status-area");
  const table=document.getElementById("month-status-table");
- const period=document.getElementById("month-status-period");
  const totalCard=document.getElementById("month-status-total-card");
 
  const configs={
@@ -1986,7 +1984,6 @@ function renderMonthStatus(){
   const datedRows=source.map((r,index)=>({r,index,d:dateOnly(r[config.date])})).filter(x=>x.d);
 
   if(!datedRows.length){
-   period.textContent=config.label+" · No dated data";
    totalCard.innerHTML=`<span class="month-total-card-label">Total ${esc(config.label)} Value</span><strong>0</strong><small>${esc(selectedArea||"All Area")} · ${arrangeBy==="so"?"SO Wise":"Product Wise"}</small>`;
    table.innerHTML=`<tbody><tr><td class="empty">No ${esc(config.label)} data found.</td></tr></tbody>`;
    return;
@@ -2056,7 +2053,6 @@ function renderMonthStatus(){
   ${footer}`;
 
   totalCard.innerHTML=`<span class="month-total-card-label">Total ${esc(config.label)} Value</span><strong>${money(grandTotal)}</strong><small>${esc(selectedArea||"All Area")} · ${arrangeBy==="so"?"SO Wise":"Product Wise"}</small>`;
-  period.innerHTML=`<strong>${latest.toLocaleDateString("en-US",{month:"long",year:"numeric"})}</strong><span>${esc(config.label)} · Through ${latest.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</span>`;
  };
 
  view.addEventListener("change",()=>{updateAreas();renderTable()});
@@ -2083,7 +2079,6 @@ function renderMyDay(){
    <div class="field"><label>To Date</label>${dateInput(iso(latest))}</div>
   </div>
   <div class="card myday-table-card">
-   <div class="myday-period-note" id="myday-period-note"></div>
    <div class="table-wrap myday-table-wrap myday-desktop-table"><table class="myday-table" id="myday-table"></table></div>
    <div id="myday-mobile-tables" class="myday-mobile-tables"></div>
   </div>`);
@@ -2091,7 +2086,7 @@ function renderMyDay(){
  const controls=document.getElementById("myday-controls");
  const view=document.getElementById("myday-view"),arrange=document.getElementById("myday-arrange");
  const dateFields=controls.querySelectorAll('input[type="date"]'),from=dateFields[0],to=dateFields[1];
- const table=document.getElementById("myday-table"),mobileTables=document.getElementById("myday-mobile-tables"),note=document.getElementById("myday-period-note");
+ const table=document.getElementById("myday-table"),mobileTables=document.getElementById("myday-mobile-tables");
  const mobileMQ=window.matchMedia("(max-width:700px)");
 
  // PERFORMANCE: cache parsed row dates so changing the calendar never reparses the whole Excel data.
@@ -2248,11 +2243,6 @@ function renderMyDay(){
   }).join("");
 
   currentState={relevant,dayOrder,dayDelivery,dayPrimary,cumOrder,cumDelivery,cumPrimary,totals};
-
-  const selectedLabel=start&&end?(start.getTime()===end.getTime()?fmtDate(start):`${fmtDate(start)} – ${fmtDate(end)}`):"Selected Date";
-  const cumulativeLabel=detected.min&&detected.max?`${fmtDate(detected.min)} – ${fmtDate(detected.max)}`:"Detected Excel Dates";
-  const scopeLabel=scope.arrangeValue?`${scope.viewBy}: ${scope.arrangeValue}`:`${scope.viewBy}: All ${scope.viewBy==="ZSM"?"Zones":"Areas"}`;
-  note.innerHTML=`<span><b>${esc(scopeLabel)}</b></span><span>Selected: <b>${esc(selectedLabel)}</b></span><span>Cumulative Excel Range: <b>${esc(cumulativeLabel)}</b></span>`;
 
   table.innerHTML=`
    <thead>
@@ -3529,5 +3519,103 @@ html[data-theme="light"] .month-status-total-card small{color:#7b8999!important}
  .month-status-area-field{grid-column:1/-1}
  .month-status-controls-v2{padding:13px!important}
  .month-status-wrap{height:548px!important;max-height:548px!important}
+}
+</style>
+
+<style id="monthStatus20RowsPatch">
+.month-status-wrap{
+  height:700px!important;
+  max-height:700px!important;
+}
+@media(max-width:760px){
+  .month-status-wrap{
+    height:692px!important;
+    max-height:692px!important;
+  }
+}
+@media(max-width:520px){
+  .month-status-wrap{
+    height:688px!important;
+    max-height:688px!important;
+  }
+}
+</style>
+
+
+<style id="monthStatusCardRightPatch">
+@media(min-width:1101px){
+  .month-status-controls-v2{
+    grid-template-columns:minmax(540px,1fr) minmax(270px,320px)!important;
+  }
+  .month-status-total-card{
+    grid-column:2!important;
+    justify-self:end!important;
+    width:100%!important;
+    max-width:320px!important;
+  }
+}
+</style>
+
+
+<style id="lightThemeBlueYellowTitleBars">
+/* Light theme: consistent blue title/header bars across all page tables */
+html[data-theme="light"] table thead th,
+html[data-theme="light"] .zone-summary thead th,
+html[data-theme="light"] .myday-table thead th,
+html[data-theme="light"] .myday-mobile-section thead th,
+html[data-theme="light"] .myday-detail-inner thead th,
+html[data-theme="light"] .myday-mobile-detail-inner thead th,
+html[data-theme="light"] .month-status-table thead th{
+  background:#0b5f9f!important;
+  color:#fff600!important;
+  border-color:#d5e1eb!important;
+  font-weight:800!important;
+}
+
+/* Keep all header text/labels bright yellow like the supplied reference */
+html[data-theme="light"] table thead th *,
+html[data-theme="light"] .month-status-table thead th *,
+html[data-theme="light"] .myday-table thead th *,
+html[data-theme="light"] .myday-mobile-section thead th *{
+  color:#fff600!important;
+}
+
+/* Month Status sticky left headers use the same exact treatment */
+html[data-theme="light"] .month-status-table thead .month-sl,
+html[data-theme="light"] .month-status-table thead .month-product,
+html[data-theme="light"] .month-status-table .month-total-head{
+  background:#0b5f9f!important;
+  color:#fff600!important;
+}
+
+/* My Day super-header should also match instead of using its older pale bar */
+html[data-theme="light"] .myday-table thead tr.myday-superhead th{
+  background:#0b5f9f!important;
+  color:#fff600!important;
+  border-color:#d5e1eb!important;
+}
+
+/* Preserve readable borders between columns */
+html[data-theme="light"] table thead th{
+  border-right-color:#d5e1eb!important;
+  border-bottom-color:#d5e1eb!important;
+}
+</style>
+
+
+<style id="myDayFiveMoreRowsPatch">
+/* My Day: taller table — approximately five additional rows visible */
+.myday-table-wrap{
+  max-height:calc(100vh - 80px)!important;
+}
+@media(max-width:900px){
+  .myday-table-wrap{
+    max-height:calc(100vh - 150px)!important;
+  }
+}
+@media(max-width:700px){
+  .myday-table-wrap{
+    max-height:calc(100vh - 230px)!important;
+  }
 }
 </style>
