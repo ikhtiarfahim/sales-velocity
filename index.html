@@ -1627,11 +1627,11 @@ function homeProductRankChart(){
    return `<div class="card home-product-rank"><div class="smalltitle">Product Wise Rank — Primary</div><div class="glance-empty">No Primary product data found.</div></div>`;
  }
 
- const width=1440;
- const height=330,left=48,right=width-18,top=42,bottom=205;
+ const width=Math.max(980,data.length*68+92);
+ const height=350,left=58,right=width-24,top=45,bottom=220;
  const max=Math.max(1,...data.map(x=>x.value));
  const xStep=(right-left)/data.length;
- const barW=Math.max(8,Math.min(25,xStep*.60));
+ const barW=Math.max(18,Math.min(38,xStep*.54));
  const y=v=>bottom-(v/max)*(bottom-top);
 
  const fmt=v=>{
@@ -1652,7 +1652,7 @@ function homeProductRankChart(){
    const cx=left+xStep*i+xStep/2;
    const yy=y(d.value);
    const h=Math.max(1,bottom-yy);
-   const label=d.product.length>18?d.product.slice(0,17)+"…":d.product;
+   const label=d.product.length>23?d.product.slice(0,22)+"…":d.product;
    return `<g class="product-rank-item">
      <rect x="${cx-barW/2}" y="${yy}" width="${barW}" height="${h}" rx="3" fill="url(#productRankBar)">
        <title>#${i+1} ${esc(d.product)} — Primary: ${money(d.value)}</title>
@@ -6433,77 +6433,6 @@ html[data-theme="light"] .product-rank-foot{
 
   .product-rank-foot{
     padding:8px 13px 11px!important;
-  }
-}
-</style>
-
-
-<style id="homeProductRankV14CompactAll">
-/* Fit every Product Wise Rank item inside one chart — NO horizontal scrolling */
-.home-product-rank .product-rank-scroll{
-  width:100%!important;
-  overflow-x:hidden!important;
-  overflow-y:hidden!important;
-  padding:4px 8px 0!important;
-  scrollbar-width:none!important;
-}
-.home-product-rank .product-rank-scroll::-webkit-scrollbar{
-  display:none!important;
-}
-.home-product-rank .product-rank-scroll svg{
-  display:block!important;
-  width:100%!important;
-  max-width:100%!important;
-  min-width:0!important;
-  height:auto!important;
-}
-
-/* Compact labels/values so all products fit cleanly */
-.home-product-rank .product-rank-value{
-  font-size:9px!important;
-}
-.home-product-rank .product-rank-number{
-  font-size:8.5px!important;
-}
-.home-product-rank .product-rank-product{
-  font-size:8.5px!important;
-  font-weight:750!important;
-}
-.home-product-rank .product-rank-axis{
-  font-size:9px!important;
-}
-.home-product-rank .product-rank-foot{
-  display:none!important;
-}
-
-/* Slightly reduce header height for a more compact card */
-.home-product-rank .product-rank-head{
-  min-height:70px!important;
-  padding:14px 18px 10px!important;
-}
-
-/* Mobile: still show every product in the same chart with no scroll.
-   The SVG scales to the device width; labels are intentionally compact. */
-@media(max-width:760px){
-  .home-product-rank .product-rank-scroll{
-    overflow:hidden!important;
-    padding:2px 2px 0!important;
-  }
-  .home-product-rank .product-rank-scroll svg{
-    width:100%!important;
-    min-width:0!important;
-  }
-  .home-product-rank .product-rank-value{
-    font-size:7px!important;
-  }
-  .home-product-rank .product-rank-number{
-    font-size:6.5px!important;
-  }
-  .home-product-rank .product-rank-product{
-    font-size:6.5px!important;
-  }
-  .home-product-rank .product-rank-axis{
-    font-size:7px!important;
   }
 }
 </style>
