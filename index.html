@@ -1076,6 +1076,41 @@ tbody tr:hover{background:#2b0740 !important}
 @media(max-width:540px){.ai-sales-advisor{width:calc(100% - 18px);margin-top:17px;min-height:116px;padding:13px 13px 14px}.ai-advisor-message{font-size:13px;line-height:1.5}}
 @media(prefers-reduced-motion:reduce){.ai-advisor-cursor{animation:none}}
 </style>
+
+<style id="homeTrendScrollbarMatchPatch">
+/* Home: make Primary & Delivery by Date scrollbar match Product Wise Rank scrollbar */
+.sales-trend .trend-wrap{
+  scrollbar-width:thin!important;
+  scrollbar-color:#77428d #2a0b38!important;
+}
+.sales-trend .trend-wrap::-webkit-scrollbar{
+  height:8px;
+}
+.sales-trend .trend-wrap::-webkit-scrollbar-track{
+  background:#2a0b38;
+  border-radius:999px;
+}
+.sales-trend .trend-wrap::-webkit-scrollbar-thumb{
+  background:#77428d;
+  border-radius:999px;
+}
+.sales-trend .trend-wrap::-webkit-scrollbar-thumb:hover{
+  background:#8b55a0;
+}
+html[data-theme="light"] .sales-trend .trend-wrap{
+  scrollbar-color:#b8c4d3 #edf0f5!important;
+}
+html[data-theme="light"] .sales-trend .trend-wrap::-webkit-scrollbar-track{
+  background:#edf0f5;
+}
+html[data-theme="light"] .sales-trend .trend-wrap::-webkit-scrollbar-thumb{
+  background:#b8c4d3;
+}
+html[data-theme="light"] .sales-trend .trend-wrap::-webkit-scrollbar-thumb:hover{
+  background:#9eacbd;
+}
+</style>
+
 </head>
 <body>
 <div class="login-overlay" id="loginOverlay" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
@@ -6434,5 +6469,131 @@ html[data-theme="light"] .product-rank-foot{
   .product-rank-foot{
     padding:8px 13px 11px!important;
   }
+}
+</style>
+
+<style id="globalDashboardScrollbarUIV1">
+/* =========================================================
+   Unified scrollbar UI — all pages / all scrollable panels
+   Includes Home Area Achievement + At a Glance (PC)
+   ========================================================= */
+
+/* Firefox */
+html,
+body,
+*{
+  scrollbar-width:thin;
+  scrollbar-color:#7a4a91 #21052f;
+}
+
+/* Chromium / Edge / Safari */
+*::-webkit-scrollbar{
+  width:8px;
+  height:8px;
+}
+*::-webkit-scrollbar-track{
+  background:#21052f;
+  border-radius:999px;
+}
+*::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,#9b6caf 0%,#704183 100%);
+  border:2px solid #21052f;
+  border-radius:999px;
+  min-height:36px;
+}
+*::-webkit-scrollbar-thumb:hover{
+  background:linear-gradient(180deg,#b17bc6 0%,#87519c 100%);
+}
+*::-webkit-scrollbar-corner{
+  background:#21052f;
+}
+*::-webkit-scrollbar-button{
+  width:0;
+  height:0;
+  display:none;
+}
+
+/* Home — Area Achievement: force the same clean scrollbar */
+.home-achievement-charts .area-achievement-list{
+  scrollbar-width:thin!important;
+  scrollbar-color:#7a4a91 #21052f!important;
+}
+.home-achievement-charts .area-achievement-list::-webkit-scrollbar{
+  width:8px!important;
+}
+.home-achievement-charts .area-achievement-list::-webkit-scrollbar-track{
+  background:#21052f!important;
+  border-radius:999px!important;
+}
+.home-achievement-charts .area-achievement-list::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,#9b6caf 0%,#704183 100%)!important;
+  border:2px solid #21052f!important;
+  border-radius:999px!important;
+}
+
+/* At a Glance (PC) — every internal vertical/horizontal scroll area */
+.glance-report-frame,
+.glance-primary-chart-scroll,
+.glance-performance-scroll,
+.glance-primary-rank-list,
+.glance-delivery-rank,
+.glance-trend-scroll,
+.glance-list-body,
+.glance-dashboard,
+.glance-main{
+  scrollbar-width:thin!important;
+  scrollbar-color:#7a4a91 #21052f!important;
+}
+
+/* Keep horizontal chart scrollbars slim and consistent */
+.sales-trend .trend-wrap,
+.table-wrap,
+.myday-table-wrap,
+.month-status-table-wrap,
+.zone-ranking-scroll{
+  scrollbar-width:thin!important;
+  scrollbar-color:#7a4a91 #21052f!important;
+}
+
+/* Light theme */
+html[data-theme="light"],
+html[data-theme="light"] body,
+html[data-theme="light"] *{
+  scrollbar-color:#91a3b5 #edf2f6;
+}
+html[data-theme="light"] *::-webkit-scrollbar-track{
+  background:#edf2f6;
+}
+html[data-theme="light"] *::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,#b9c6d2 0%,#8799aa 100%);
+  border-color:#edf2f6;
+}
+html[data-theme="light"] *::-webkit-scrollbar-thumb:hover{
+  background:linear-gradient(180deg,#a9bac8 0%,#758a9e 100%);
+}
+html[data-theme="light"] *::-webkit-scrollbar-corner{
+  background:#edf2f6;
+}
+html[data-theme="light"] .home-achievement-charts .area-achievement-list,
+html[data-theme="light"] .glance-report-frame,
+html[data-theme="light"] .glance-primary-chart-scroll,
+html[data-theme="light"] .glance-performance-scroll,
+html[data-theme="light"] .glance-primary-rank-list,
+html[data-theme="light"] .glance-delivery-rank,
+html[data-theme="light"] .glance-trend-scroll,
+html[data-theme="light"] .glance-list-body,
+html[data-theme="light"] .sales-trend .trend-wrap,
+html[data-theme="light"] .table-wrap,
+html[data-theme="light"] .myday-table-wrap,
+html[data-theme="light"] .month-status-table-wrap,
+html[data-theme="light"] .zone-ranking-scroll{
+  scrollbar-color:#91a3b5 #edf2f6!important;
+}
+html[data-theme="light"] .home-achievement-charts .area-achievement-list::-webkit-scrollbar-track{
+  background:#edf2f6!important;
+}
+html[data-theme="light"] .home-achievement-charts .area-achievement-list::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,#b9c6d2 0%,#8799aa 100%)!important;
+  border-color:#edf2f6!important;
 }
 </style>
