@@ -1611,6 +1611,85 @@ function homeSalesTrend(){
  const labels=data.map((d,i)=>`<text x="${x(i)}" y="232" text-anchor="middle" fill="#617895" font-size="10">${d.date.slice(8)}</text>`).join("");
  return `<div class="card sales-trend"><div class="smalltitle">Primary &amp; Delivery by Date — ${esc(new Date(Number(latest.slice(0,4)),Number(latest.slice(5,7))-1,1).toLocaleDateString("en-US",{month:"long",year:"numeric"}))}</div><div class="trend-wrap"><svg width="${width}" viewBox="0 0 ${width} 245" role="img" aria-label="Daily Primary and Delivery values for ${esc(latest.slice(0,7))}">${ticks}${lines}${labels}</svg></div><div class="trend-legend"><span><i style="background:#ffd400"></i>Primary</span><span><i style="background:#e12535"></i>Delivery</span></div><details style="margin-top:12px"><summary style="cursor:pointer;color:#58728e;font-size:13px">See exact daily values</summary><div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>Date</th><th style="text-align:right">Primary</th><th style="text-align:right">Delivery</th></tr></thead><tbody>${data.map(d=>`<tr><td>${esc(d.date)}</td><td class="num">${money(d.primary)}</td><td class="num">${money(d.delivery)}</td></tr>`).join("")}</tbody></table></div></details></div>`;
 }
+
+function homeProductRankChart(){
+ const totals=new Map();
+ rows("Primary").forEach(r=>{
+   const product=String(r.SKU??"").trim();
+   const value=Math.max(0,Number(r["__PRIMARY_VALUE"])||0);
+   if(!product||!value)return;
+   totals.set(product,(totals.get(product)||0)+value);
+ });
+ const data=[...totals.entries()]
+   .map(([product,value])=>({product,value}))
+   .sort((a,b)=>b.value-a.value||a.product.localeCompare(b.product));
+ if(!data.length){
+   return `<div class="card home-product-rank"><div class="smalltitle">Product Wise Rank — Primary</div><div class="glance-empty">No Primary product data found.</div></div>`;
+ }
+
+ const width=Math.max(980,data.length*68+92);
+ const height=350,left=58,right=width-24,top=45,bottom=220;
+ const max=Math.max(1,...data.map(x=>x.value));
+ const xStep=(right-left)/data.length;
+ const barW=Math.max(18,Math.min(38,xStep*.54));
+ const y=v=>bottom-(v/max)*(bottom-top);
+
+ const fmt=v=>{
+   const n=Math.abs(v);
+   if(n>=10000000)return (v/10000000).toFixed(v>=100000000?1:2)+" Cr";
+   if(n>=100000)return (v/100000).toFixed(v>=1000000?1:2)+" L";
+   if(n>=1000)return (v/1000).toFixed(v>=10000?1:2)+" K";
+   return money(v);
+ };
+
+ const grid=[0,.25,.5,.75,1].map(f=>{
+   const yy=y(max*f);
+   return `<line x1="${left}" y1="${yy}" x2="${right}" y2="${yy}" class="product-rank-grid"/>
+           <text x="${left-10}" y="${yy+4}" text-anchor="end" class="product-rank-axis">${fmt(max*f)}</text>`;
+ }).join("");
+
+ const bars=data.map((d,i)=>{
+   const cx=left+xStep*i+xStep/2;
+   const yy=y(d.value);
+   const h=Math.max(1,bottom-yy);
+   const label=d.product.length>23?d.product.slice(0,22)+"…":d.product;
+   return `<g class="product-rank-item">
+     <rect x="${cx-barW/2}" y="${yy}" width="${barW}" height="${h}" rx="3" fill="url(#productRankBar)">
+       <title>#${i+1} ${esc(d.product)} — Primary: ${money(d.value)}</title>
+     </rect>
+     <rect x="${cx-barW/2}" y="${yy}" width="${barW}" height="4" rx="2" class="product-rank-bar-cap"/>
+     <text x="${cx}" y="${Math.max(18,yy-8)}" text-anchor="middle" class="product-rank-value">${fmt(d.value)}</text>
+     <text x="${cx}" y="${bottom+20}" text-anchor="middle" class="product-rank-number">#${i+1}</text>
+     <text transform="translate(${cx-4},${bottom+36}) rotate(-43)" text-anchor="end" class="product-rank-product">${esc(label)}</text>
+   </g>`;
+ }).join("");
+
+ return `<div class="card home-product-rank">
+   <div class="product-rank-head">
+     <div>
+       <div class="smalltitle">Product Wise Rank</div>
+       <div class="product-rank-subtitle">Primary sales ranking by product</div>
+     </div>
+     <div class="product-rank-badge">${data.length} Products</div>
+   </div>
+   <div class="product-rank-scroll">
+     <svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Product wise Primary sales rank chart">
+       <defs>
+         <linearGradient id="productRankBar" x1="0" y1="1" x2="0" y2="0">
+           <stop offset="0%" stop-color="#168e9c"/>
+           <stop offset="55%" stop-color="#35c4c5"/>
+           <stop offset="100%" stop-color="#9af1e9"/>
+         </linearGradient>
+       </defs>
+       ${grid}
+       <line x1="${left}" y1="${bottom}" x2="${right}" y2="${bottom}" class="product-rank-baseline"/>
+       ${bars}
+     </svg>
+   </div>
+   <div class="product-rank-foot">Products are ranked from highest to lowest Primary value. Hover a bar to see the exact value.</div>
+ </div>`;
+}
+
 function homeAreaPerformanceRows(){
  const map=new Map();
  const ensure=name=>{const key=String(name||"").trim().toLowerCase();if(!key)return null;if(!map.has(key))map.set(key,{area:String(name).trim(),target:0,primary:0,delivery:0,order:0});return map.get(key)};
@@ -1747,6 +1826,7 @@ function renderHome(){
  ${metric("Ballpen Total Primary Sales",skuPrimaryTotals.ballpen,"","kpi-target-avg kpi-average")}${metric("Pencil Total Primary Sales",skuPrimaryTotals.pencil,"","kpi-primary-avg kpi-average")}${metric("Eraser Total Primary Sales",skuPrimaryTotals.eraser,"","kpi-delivery-avg kpi-average")}${metric("Numbering Machine Total Primary Sales",skuPrimaryTotals.numbering,"","kpi-order-avg kpi-average")}
  ${homeAchievementMeter(totalZonePrimary,totalZoneTarget)}${homeSalesTrend()}
  </div>
+ ${homeProductRankChart()}
  <div class="home-achievement-charts">
  <div class="card zone-ranking">${zoneAchievementChart(zoneAchievementData(null,null),"","Zone")}</div>
  <div class="card zone-ranking">${zoneAchievementChart(areaAchievementData(null,null),"","Area")}</div>
@@ -5995,5 +6075,364 @@ html[data-theme="light"] .glance-performance-simple .perf-achv.low span{color:#b
   transform:none!important;
   animation:none!important;
   transition:none!important;
+}
+</style>
+
+
+<style id="homeProductRankV11">
+/* Home — Product Wise Rank chart */
+.home-product-rank{
+  margin-top:24px!important;
+  padding:0!important;
+  overflow:hidden!important;
+  border:1px solid #214d68!important;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(42,151,176,.16),transparent 44%),
+    linear-gradient(180deg,#08283c 0%,#061f32 100%)!important;
+  box-shadow:0 12px 30px rgba(0,0,0,.18)!important;
+}
+.product-rank-head{
+  min-height:66px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+  padding:13px 20px!important;
+  border-bottom:1px solid rgba(94,194,210,.23)!important;
+  background:linear-gradient(90deg,rgba(12,61,87,.96),rgba(9,44,67,.96))!important;
+}
+.home-product-rank .smalltitle{
+  margin:0!important;
+  color:#fff!important;
+  font-size:17px!important;
+  font-weight:900!important;
+  letter-spacing:.2px!important;
+}
+.product-rank-subtitle{
+  margin-top:4px!important;
+  color:#86b9ca!important;
+  font-size:11px!important;
+  font-weight:650!important;
+}
+.product-rank-badge{
+  flex:0 0 auto!important;
+  padding:6px 10px!important;
+  border:1px solid rgba(86,229,225,.35)!important;
+  border-radius:999px!important;
+  color:#70eee7!important;
+  background:rgba(33,166,175,.10)!important;
+  font-size:11px!important;
+  font-weight:850!important;
+}
+.product-rank-scroll{
+  width:100%!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  padding:4px 8px 0!important;
+  scrollbar-color:#3e7887 #071d2d!important;
+  scrollbar-width:thin!important;
+}
+.product-rank-scroll svg{
+  display:block!important;
+  min-width:100%!important;
+}
+.product-rank-grid{
+  stroke:rgba(112,185,203,.18)!important;
+  stroke-width:1!important;
+}
+.product-rank-baseline{
+  stroke:rgba(172,230,237,.34)!important;
+  stroke-width:1.2!important;
+}
+.product-rank-axis{
+  fill:#9dbdca!important;
+  font-size:10px!important;
+  font-weight:650!important;
+}
+.product-rank-value{
+  fill:#e8ffff!important;
+  font-size:10px!important;
+  font-weight:900!important;
+  paint-order:stroke!important;
+  stroke:#08283c!important;
+  stroke-width:3px!important;
+  stroke-linejoin:round!important;
+}
+.product-rank-number{
+  fill:#62e6e1!important;
+  font-size:10px!important;
+  font-weight:900!important;
+}
+.product-rank-product{
+  fill:#d8eef3!important;
+  font-size:10px!important;
+  font-weight:700!important;
+}
+.product-rank-bar-cap{
+  fill:#d7fff8!important;
+  opacity:.72!important;
+}
+.product-rank-foot{
+  padding:8px 20px 12px!important;
+  border-top:1px solid rgba(94,194,210,.12)!important;
+  color:#789eac!important;
+  font-size:10px!important;
+}
+
+/* Light mode: retain the same blue/cyan chart identity while fitting the light UI */
+html[data-theme="light"] .home-product-rank{
+  border-color:#b9d5df!important;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(42,151,176,.12),transparent 44%),
+    linear-gradient(180deg,#123b51 0%,#0b2c40 100%)!important;
+  box-shadow:0 10px 25px rgba(24,70,90,.10)!important;
+}
+html[data-theme="light"] .product-rank-head{
+  background:linear-gradient(90deg,#0e5275,#11688b)!important;
+}
+
+/* Mobile: full width and horizontally scrollable, no overlap */
+@media(max-width:760px){
+  .home-product-rank{
+    margin-top:16px!important;
+    border-radius:14px!important;
+  }
+  .product-rank-head{
+    min-height:58px!important;
+    padding:11px 13px!important;
+  }
+  .home-product-rank .smalltitle{font-size:15px!important}
+  .product-rank-subtitle{font-size:10px!important}
+  .product-rank-badge{font-size:9px!important;padding:5px 8px!important}
+  .product-rank-scroll{padding-left:0!important;padding-right:0!important}
+  .product-rank-foot{padding:8px 13px 11px!important}
+}
+</style>
+
+
+<style id="homeProductRankV13MatchingUI">
+/* =========================================================
+   PRODUCT WISE RANK
+   Keep original vertical ranking chart exactly as-is.
+   Only change visual design to match Zone/Area Achievement UI.
+   ========================================================= */
+
+.home-product-rank{
+  margin-top:24px!important;
+  padding:0!important;
+  overflow:hidden!important;
+  border:1px solid rgba(125,62,150,.48)!important;
+  border-radius:22px!important;
+  background:#21002f!important;
+  box-shadow:none!important;
+}
+
+.product-rank-head{
+  min-height:82px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:16px!important;
+  padding:17px 20px 13px!important;
+  border-bottom:1px solid rgba(147,83,170,.28)!important;
+  background:transparent!important;
+}
+
+.home-product-rank .smalltitle{
+  margin:0!important;
+  color:#ffffff!important;
+  font-size:20px!important;
+  font-weight:900!important;
+  letter-spacing:0!important;
+}
+
+.product-rank-subtitle{
+  margin-top:5px!important;
+  color:#d68bde!important;
+  font-size:13px!important;
+  font-weight:550!important;
+}
+
+.product-rank-badge{
+  flex:0 0 auto!important;
+  padding:8px 12px!important;
+  border:0!important;
+  border-radius:999px!important;
+  color:#27e7ef!important;
+  background:#3a0752!important;
+  font-size:12px!important;
+  font-weight:900!important;
+}
+
+.product-rank-scroll{
+  width:100%!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  padding:8px 8px 0!important;
+  scrollbar-color:#77428d #2a0b38!important;
+  scrollbar-width:thin!important;
+}
+
+.product-rank-scroll svg{
+  display:block!important;
+  min-width:100%!important;
+}
+
+/* Grid / axes now use the same purple dashboard family */
+.product-rank-grid{
+  stroke:rgba(199,145,214,.18)!important;
+  stroke-width:1!important;
+}
+
+.product-rank-baseline{
+  stroke:rgba(221,181,230,.35)!important;
+  stroke-width:1.2!important;
+}
+
+.product-rank-axis{
+  fill:#d3a8dd!important;
+  font-size:10px!important;
+  font-weight:700!important;
+}
+
+.product-rank-value{
+  fill:#ffffff!important;
+  font-size:10px!important;
+  font-weight:900!important;
+  paint-order:stroke!important;
+  stroke:#21002f!important;
+  stroke-width:3px!important;
+  stroke-linejoin:round!important;
+}
+
+.product-rank-number{
+  fill:#35e7e7!important;
+  font-size:10px!important;
+  font-weight:900!important;
+}
+
+.product-rank-product{
+  fill:#ffffff!important;
+  font-size:10px!important;
+  font-weight:750!important;
+}
+
+/* The existing SVG bar gradient stays vertical, but recolor it via CSS.
+   This matches the gradient language used in Zone/Area Achievement. */
+.home-product-rank #productRankBar stop:nth-child(1){
+  stop-color:#b837d2!important;
+}
+.home-product-rank #productRankBar stop:nth-child(2){
+  stop-color:#f0529d!important;
+}
+.home-product-rank #productRankBar stop:nth-child(3){
+  stop-color:#32d8d9!important;
+}
+
+.product-rank-bar-cap{
+  fill:#ffd1ec!important;
+  opacity:.8!important;
+}
+
+.product-rank-foot{
+  padding:9px 20px 13px!important;
+  border-top:1px solid rgba(147,83,170,.20)!important;
+  color:#b884c6!important;
+  font-size:10px!important;
+}
+
+/* ===================== LIGHT THEME ===================== */
+html[data-theme="light"] .home-product-rank{
+  border-color:#d8dce7!important;
+  background:#ffffff!important;
+  box-shadow:0 8px 24px rgba(35,24,55,.07)!important;
+}
+
+html[data-theme="light"] .product-rank-head{
+  border-bottom-color:#e4e6ed!important;
+  background:#ffffff!important;
+}
+
+html[data-theme="light"] .home-product-rank .smalltitle{
+  color:#172033!important;
+}
+
+html[data-theme="light"] .product-rank-subtitle{
+  color:#697389!important;
+}
+
+html[data-theme="light"] .product-rank-badge{
+  color:#078e9b!important;
+  background:#edf9fb!important;
+  border:1px solid #c8edf0!important;
+}
+
+html[data-theme="light"] .product-rank-scroll{
+  scrollbar-color:#b8c4d3 #edf0f5!important;
+}
+
+html[data-theme="light"] .product-rank-grid{
+  stroke:rgba(64,82,112,.14)!important;
+}
+
+html[data-theme="light"] .product-rank-baseline{
+  stroke:rgba(64,82,112,.28)!important;
+}
+
+html[data-theme="light"] .product-rank-axis{
+  fill:#68728a!important;
+}
+
+html[data-theme="light"] .product-rank-value{
+  fill:#1d273b!important;
+  stroke:#ffffff!important;
+}
+
+html[data-theme="light"] .product-rank-number{
+  fill:#078e9b!important;
+}
+
+html[data-theme="light"] .product-rank-product{
+  fill:#273147!important;
+}
+
+html[data-theme="light"] .product-rank-foot{
+  border-top-color:#e4e6ed!important;
+  color:#748096!important;
+}
+
+/* ===================== MOBILE ===================== */
+@media(max-width:760px){
+  .home-product-rank{
+    margin-top:16px!important;
+    border-radius:17px!important;
+  }
+
+  .product-rank-head{
+    min-height:66px!important;
+    padding:13px 13px 10px!important;
+  }
+
+  .home-product-rank .smalltitle{
+    font-size:17px!important;
+  }
+
+  .product-rank-subtitle{
+    font-size:11px!important;
+  }
+
+  .product-rank-badge{
+    padding:6px 9px!important;
+    font-size:10px!important;
+  }
+
+  .product-rank-scroll{
+    padding-left:0!important;
+    padding-right:0!important;
+  }
+
+  .product-rank-foot{
+    padding:8px 13px 11px!important;
+  }
 }
 </style>
