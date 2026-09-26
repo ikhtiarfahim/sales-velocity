@@ -2386,10 +2386,10 @@ function renderMyDay(){
  const latest=detected.max;
  shell("My Day","Daily / selected-date sales beside full Excel cumulative sales",`
   <div class="card myday-controls" id="myday-controls">
-   <div class="field"><label>View By</label><select id="myday-view"><option value="ASM">ASM</option><option value="ZSM">ZSM</option></select></div>
-   <div class="field"><label>Arrange By</label><select id="myday-arrange"></select></div>
    <div class="field"><label>From Date</label>${dateInput(iso(latest))}</div>
    <div class="field"><label>To Date</label>${dateInput(iso(latest))}</div>
+   <div class="field"><label>View By</label><select id="myday-view"><option value="ASM">ASM</option><option value="ZSM">ZSM</option></select></div>
+   <div class="field"><label>Arrange By</label><select id="myday-arrange"></select></div>
   </div>
   <div class="card myday-table-card">
    <div class="table-wrap myday-table-wrap myday-desktop-table"><table class="myday-table" id="myday-table"></table></div>
